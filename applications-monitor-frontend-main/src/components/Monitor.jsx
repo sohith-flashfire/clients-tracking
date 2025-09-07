@@ -451,7 +451,7 @@ export default function Monitor() {
   const [err, setErr] = useState("");
   const [selectedClient, setSelectedClient] = useState(null);
   const [filterDate, setFilterDate] = useState(""); // yyyy-mm-dd
-  const [showClients, setShowClients] = useState(false);
+  const [showClients, setShowClients] = useState(true);
   const [showClientDetails, setShowClientDetails] = useState(false);
   const [clientDetailsEmail, setClientDetailsEmail] = useState('');
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
