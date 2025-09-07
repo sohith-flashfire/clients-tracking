@@ -181,15 +181,15 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
               : `Click to view ${k} jobs`;
             
             return (
-              <span
-                key={k}
+            <span
+              key={k}
                 className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
                   onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
                 } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''} ${allStatuses[k] === 0 ? 'opacity-60' : ''}`}
                 title={title}
                 onClick={onStatusClick ? () => onStatusClick(k) : undefined}
-              >
-                <span className="capitalize">{k}</span>
+            >
+              <span className="capitalize">{k}</span>
                 <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : allStatuses[k] === 0 ? 'bg-slate-200 text-slate-500' : 'bg-slate-100'}`}>
                   {displayCount}
                 </span>
@@ -198,7 +198,7 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
                     (on {new Date(filterDate).toLocaleDateString('en-GB')})
                   </span>
                 )}
-              </span>
+            </span>
             );
           })
         )}
@@ -287,12 +287,12 @@ function JobDetailsModal({ job, isOpen, onClose }) {
               {typeof job.jobDescription === "string" ? (
                 <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
                   {job.jobDescription}
-                </div>
+      </div>
               ) : (
                 <div className="text-slate-500 italic">
                   No job description available
-                </div>
-              )}
+        </div>
+      )}
             </div>
           </div>
         </div>
@@ -385,7 +385,18 @@ function ClientDetailsSection({ clientEmail, clientDetails }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-md">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Client Information</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-slate-700">Client Information</h3>
+        <button
+          onClick={() => {
+            setClientDetailsEmail(clientEmail);
+            setShowClientDetails(true);
+          }}
+          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
+        >
+          Edit Details
+        </button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Team Lead</label>
@@ -422,6 +433,78 @@ function ClientDetailsSection({ clientEmail, clientDetails }) {
           <p className="text-sm text-slate-900 mt-1">
             {clientDetails.name || clientEmail.split('@')[0]}
           </p>
+        </div>
+      </div>
+      
+      {/* Task Checklist Section */}
+      <div className="mt-6 pt-4 border-t border-slate-200">
+        <h4 className="text-sm font-semibold text-slate-700 mb-3">Task Checklist</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.whatsappGroupMade ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">WhatsApp Group</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.dashboardCredentialsShared ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">Dashboard Credentials</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.resumeSent ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">Resume Sent</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.coverLetterSent ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">Cover Letter</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.portfolioMade ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">Portfolio Made</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full flex items-center justify-center">
+              {clientDetails.linkedinOptimization ? (
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              ) : (
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs text-slate-600">LinkedIn Optimization</span>
+          </div>
         </div>
       </div>
     </div>
@@ -567,7 +650,7 @@ export default function Monitor() {
   };
 
   if (showClientDetails) {
-    return (
+  return (
       <ClientDetails 
         clientEmail={clientDetailsEmail} 
         onClose={handleCloseClientDetails}
@@ -666,10 +749,10 @@ export default function Monitor() {
           <>
             {/* Slim status bar */}
             <div className="ml-8">
-              <StatusBar
-                counts={statusCounts}
-                dateAppliedCount={dateAppliedCount}
-                filterDate={filterDate}
+            <StatusBar
+              counts={statusCounts}
+              dateAppliedCount={dateAppliedCount}
+              filterDate={filterDate}
                 onStatusClick={(status) => {
                   // Toggle functionality: if same status is clicked, close panel
                   if (selectedStatus === status && rightSidebarOpen) {
@@ -730,12 +813,12 @@ export default function Monitor() {
                 />
                 {filterDate && (
                   <>
-                    <button
-                      onClick={() => setFilterDate("")}
+                  <button
+                    onClick={() => setFilterDate("")}
                       className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                    >
-                      Clear
-                    </button>
+                  >
+                    Clear
+                  </button>
                     <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
                       <span className="text-sm font-medium text-blue-800">
                         Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
@@ -788,7 +871,6 @@ export default function Monitor() {
           />
         </div>
       )}
-
       {/* Job Details Modal */}
       <JobDetailsModal 
         job={selectedJob}

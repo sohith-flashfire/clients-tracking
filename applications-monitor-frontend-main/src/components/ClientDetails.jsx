@@ -601,5 +601,4 @@ const ClientDetails = ({ clientEmail, onClose }) => {
     </div>
   );
 };
-
 export default ClientDetails;
