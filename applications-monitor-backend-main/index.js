@@ -81,8 +81,11 @@ const getAllJobs = async (req, res)=> {
 // Client management endpoints
 const getAllClients = async (req, res) => {
     try {
+        console.log('📊 getAllClients: Starting to fetch job applications...');
+        
         // Get all job applications from jobdbs collection (READ ONLY)
         const jobApplications = await JobModel.find();
+        console.log(`📊 getAllClients: Found ${jobApplications.length} job applications`);
         
         // Group by userID (email) to get unique clients
         const clientMap = {};
@@ -110,9 +113,11 @@ const getAllClients = async (req, res) => {
         
         // Convert to array format
         const clients = Object.values(clientMap);
+        console.log(`📊 getAllClients: Returning ${clients.length} unique clients`);
         
         res.status(200).json({clients});
     } catch (error) {
+        console.error('❌ getAllClients Error:', error);
         res.status(500).json({error: error.message});
     }
 }
