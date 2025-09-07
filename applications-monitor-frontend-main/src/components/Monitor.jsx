@@ -140,19 +140,35 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
         {keys.length === 0 ? (
           <span className="text-xs text-slate-500">No jobs for this client.</span>
         ) : (
-          keys.map((k) => (
-            <span
-              key={k}
-              className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
-                onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
-              }`}
-              title={`Click to view ${k} jobs`}
-              onClick={onStatusClick ? () => onStatusClick(k) : undefined}
-            >
-              <span className="capitalize">{k}</span>
-              <span className="rounded bg-slate-100 px-1.5">{counts[k]}</span>
-            </span>
-          ))
+          keys.map((k) => {
+            // Special handling for "applied" status when date is filtered
+            const isAppliedWithDate = k === "applied" && filterDate && dateAppliedCount > 0;
+            const displayCount = isAppliedWithDate ? dateAppliedCount : counts[k];
+            const title = isAppliedWithDate 
+              ? `Applied on ${new Date(filterDate).toLocaleDateString('en-GB')}: ${dateAppliedCount} jobs`
+              : `Click to view ${k} jobs`;
+            
+            return (
+              <span
+                key={k}
+                className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
+                  onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
+                } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''}`}
+                title={title}
+                onClick={onStatusClick ? () => onStatusClick(k) : undefined}
+              >
+                <span className="capitalize">{k}</span>
+                <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : 'bg-slate-100'}`}>
+                  {displayCount}
+                </span>
+                {isAppliedWithDate && (
+                  <span className="text-xs text-blue-600 font-medium">
+                    (on {new Date(filterDate).toLocaleDateString('en-GB')})
+                  </span>
+                )}
+              </span>
+            );
+          })
         )}
 
       </div>
@@ -588,12 +604,22 @@ export default function Monitor() {
                   className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {filterDate && (
-                  <button
-                    onClick={() => setFilterDate("")}
-                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    Clear
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setFilterDate("")}
+                      className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                      <span className="text-sm font-medium text-blue-800">
+                        Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
+                      </span>
+                      <span className="text-sm font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded">
+                        {dateAppliedCount}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
