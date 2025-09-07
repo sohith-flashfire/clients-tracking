@@ -12,13 +12,6 @@ import 'dotenv/config';
 
 
 
-const app = express();
-app.use(cors({
-    origin: CORS_ORIGIN,
-    credentials: true
-}));
-app.use(express.json());
-
 // Environment Variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const PORT = process.env.PORT || 8086;
@@ -26,6 +19,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/applic
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : ['tripathipranjal01@gmail.com', 'adit.jain606@gmail.com'];
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const SESSION_KEY_DURATION = parseInt(process.env.SESSION_KEY_DURATION) || 24;
+
+const app = express();
+app.use(cors({
+    origin: CORS_ORIGIN,
+    credentials: true
+}));
+app.use(express.json());
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
