@@ -66,7 +66,7 @@ const createOrUpdateClient = async (req, res) => {
         const planPrices = {
             ignite: 199,
             professional: 349,
-            executive: 599
+            executive: 599,
         };
         
         const clientData = {
