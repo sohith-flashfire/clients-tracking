@@ -90,11 +90,28 @@ function safeDate(job) {
   return parseFlexibleDate(job.updatedAt || job.dateAdded);
 }
 
-// Status counters: { applied: 10, interviewing: 4, rejected: 2, ... }
+// Status mapping to standardize status names
+function mapStatusToStandard(status) {
+  const statusMap = {
+    'offer': 'offers',
+    'hired': 'offers', // Treat hired as offers
+    'on-hold': 'interviewing', // Treat on-hold as interviewing
+    'deleted': 'removed', // Map deleted to removed
+    'saved': 'saved',
+    'applied': 'applied',
+    'interviewing': 'interviewing',
+    'rejected': 'rejected'
+  };
+  
+  const normalizedStatus = String(status || "").toLowerCase();
+  return statusMap[normalizedStatus] || normalizedStatus;
+}
+
+// Status counters: { saved: 5, applied: 10, interviewing: 4, offers: 2, rejected: 3, removed: 1 }
 function getStatusCounts(jobs = []) {
   const counts = {};
   for (const j of jobs) {
-    const s = String(j.currentStatus || "").toLowerCase() || "unknown";
+    const s = mapStatusToStandard(j.currentStatus);
     counts[s] = (counts[s] || 0) + 1;
   }
   return counts;
@@ -126,14 +143,29 @@ function ClientList({ clients = [], selected, onSelect }) {
 }
 
 function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClick }) {
-  // Show common statuses first, then any extra in alpha order.
-  const commonOrder = ["applied", "interviewing", "rejected", "offer", "hired", "on-hold"];
+  // Always show common statuses, even if they have 0 counts
+  const commonOrder = ["saved", "applied", "interviewing", "offers", "rejected", "removed"];
+  
+  // Create a complete status object with all common statuses, defaulting to 0
+  const allStatuses = {};
+  commonOrder.forEach(status => {
+    allStatuses[status] = counts[status] || 0;
+  });
+  
+  // Add any extra statuses that exist in counts but aren't in common order
+  Object.keys(counts).forEach(status => {
+    if (!commonOrder.includes(status)) {
+      allStatuses[status] = counts[status];
+    }
+  });
+  
   const keys = [
-    ...commonOrder.filter((k) => counts[k]),
-    ...Object.keys(counts)
+    ...commonOrder.filter((k) => allStatuses.hasOwnProperty(k)),
+    ...Object.keys(allStatuses)
       .filter((k) => !commonOrder.includes(k))
       .sort(),
   ];
+  
   return (
     <div className="sticky top-0 z-10 mb-3 w-full border border-slate-200 bg-white/80 backdrop-blur px-3 py-2 rounded-lg">
       <div className="flex flex-wrap items-center gap-2">
@@ -143,7 +175,7 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
           keys.map((k) => {
             // Special handling for "applied" status when date is filtered
             const isAppliedWithDate = k === "applied" && filterDate && dateAppliedCount > 0;
-            const displayCount = isAppliedWithDate ? dateAppliedCount : counts[k];
+            const displayCount = isAppliedWithDate ? dateAppliedCount : allStatuses[k];
             const title = isAppliedWithDate 
               ? `Applied on ${new Date(filterDate).toLocaleDateString('en-GB')}: ${dateAppliedCount} jobs`
               : `Click to view ${k} jobs`;
@@ -153,12 +185,12 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
                 key={k}
                 className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
                   onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
-                } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''}`}
+                } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''} ${allStatuses[k] === 0 ? 'opacity-60' : ''}`}
                 title={title}
                 onClick={onStatusClick ? () => onStatusClick(k) : undefined}
               >
                 <span className="capitalize">{k}</span>
-                <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : 'bg-slate-100'}`}>
+                <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : allStatuses[k] === 0 ? 'bg-slate-200 text-slate-500' : 'bg-slate-100'}`}>
                   {displayCount}
                 </span>
                 {isAppliedWithDate && (
@@ -437,7 +469,8 @@ export default function Monitor() {
         const current = String(job.currentStatus || "").toLowerCase();
         const last = getLastTimelineStatus(job.timeline || []);
         const status = current || last || "unknown";
-        return status === selectedStatus;
+        const mappedStatus = mapStatusToStandard(status);
+        return mappedStatus === selectedStatus;
       }).sort(sortByUpdatedDesc);
     } catch (error) {
       console.error('Error filtering jobs by status:', error);
