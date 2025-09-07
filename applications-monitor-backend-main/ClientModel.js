@@ -39,6 +39,41 @@ export const ClientSchema = new mongoose.Schema({
     required: true,
     default: 199
   },
+  onboardingDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  whatsappGroupMade: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  dashboardCredentialsShared: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  resumeSent: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  coverLetterSent: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  portfolioMade: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  linkedinOptimization: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
   gmailCredentials: {
     email: {
       type: String,

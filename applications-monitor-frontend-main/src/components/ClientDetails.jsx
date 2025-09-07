@@ -13,6 +13,13 @@ const ClientDetails = ({ clientEmail, onClose }) => {
     dashboardInternName: '',
     dashboardTeamLeadName: '',
     planType: 'ignite',
+    onboardingDate: '',
+    whatsappGroupMade: false,
+    dashboardCredentialsShared: false,
+    resumeSent: false,
+    coverLetterSent: false,
+    portfolioMade: false,
+    linkedinOptimization: false,
     gmailCredentials: {
       email: '',
       password: ''
@@ -50,6 +57,13 @@ const ClientDetails = ({ clientEmail, onClose }) => {
           dashboardInternName: data.client.dashboardInternName || '',
           dashboardTeamLeadName: data.client.dashboardTeamLeadName || '',
           planType: data.client.planType || 'ignite',
+          onboardingDate: data.client.onboardingDate || '',
+          whatsappGroupMade: data.client.whatsappGroupMade || false,
+          dashboardCredentialsShared: data.client.dashboardCredentialsShared || false,
+          resumeSent: data.client.resumeSent || false,
+          coverLetterSent: data.client.coverLetterSent || false,
+          portfolioMade: data.client.portfolioMade || false,
+          linkedinOptimization: data.client.linkedinOptimization || false,
           gmailCredentials: {
             email: data.client.gmailCredentials?.email || '',
             password: data.client.gmailCredentials?.password || ''
@@ -68,7 +82,7 @@ const ClientDetails = ({ clientEmail, onClose }) => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     if (name.startsWith('gmailCredentials.')) {
       const field = name.split('.')[1];
       setFormData(prev => ({
@@ -81,7 +95,7 @@ const ClientDetails = ({ clientEmail, onClose }) => {
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: type === 'checkbox' ? checked : value
       }));
     }
   };
@@ -340,6 +354,174 @@ const ClientDetails = ({ clientEmail, onClose }) => {
                         )}
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Onboarding Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        name="onboardingDate"
+                        value={formData.onboardingDate}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
+                        {client?.onboardingDate ? new Date(client.onboardingDate).toLocaleDateString('en-GB') : <span className="text-slate-400 italic">Not set</span>}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Task Checklist
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="whatsappGroupMade"
+                        checked={formData.whatsappGroupMade}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.whatsappGroupMade && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      WhatsApp Group Made
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="dashboardCredentialsShared"
+                        checked={formData.dashboardCredentialsShared}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.dashboardCredentialsShared && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      Dashboard Credentials Shared
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="resumeSent"
+                        checked={formData.resumeSent}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.resumeSent && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      Resume Sent
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="coverLetterSent"
+                        checked={formData.coverLetterSent}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.coverLetterSent && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      Cover Letter Sent
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="portfolioMade"
+                        checked={formData.portfolioMade}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.portfolioMade && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      Portfolio Made
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {isEditing ? (
+                      <input
+                        type="checkbox"
+                        name="linkedinOptimization"
+                        checked={formData.linkedinOptimization}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
+                        {client?.linkedinOptimization && (
+                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <label className="text-sm font-medium text-slate-700">
+                      LinkedIn Optimization
+                    </label>
                   </div>
                 </div>
               </div>

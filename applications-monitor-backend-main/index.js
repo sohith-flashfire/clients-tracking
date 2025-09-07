@@ -60,7 +60,7 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, dashboardInternName, dashboardTeamLeadName, planType, gmailCredentials } = req.body;
+        const { email, name, jobDeadline, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, dashboardCredentialsShared, resumeSent, coverLetterSent, portfolioMade, linkedinOptimization, gmailCredentials } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -77,6 +77,13 @@ const createOrUpdateClient = async (req, res) => {
             dashboardTeamLeadName,
             planType,
             planPrice: planPrices[planType] || 199,
+            onboardingDate,
+            whatsappGroupMade,
+            dashboardCredentialsShared,
+            resumeSent,
+            coverLetterSent,
+            portfolioMade,
+            linkedinOptimization,
             gmailCredentials,
             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
         };

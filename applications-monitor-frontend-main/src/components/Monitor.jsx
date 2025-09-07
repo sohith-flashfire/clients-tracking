@@ -90,11 +90,28 @@ function safeDate(job) {
   return parseFlexibleDate(job.updatedAt || job.dateAdded);
 }
 
-// Status counters: { applied: 10, interviewing: 4, rejected: 2, ... }
+// Status mapping to standardize status names
+function mapStatusToStandard(status) {
+  const statusMap = {
+    'offer': 'offers',
+    'hired': 'offers', // Treat hired as offers
+    'on-hold': 'interviewing', // Treat on-hold as interviewing
+    'deleted': 'removed', // Map deleted to removed
+    'saved': 'saved',
+    'applied': 'applied',
+    'interviewing': 'interviewing',
+    'rejected': 'rejected'
+  };
+  
+  const normalizedStatus = String(status || "").toLowerCase();
+  return statusMap[normalizedStatus] || normalizedStatus;
+}
+
+// Status counters: { saved: 5, applied: 10, interviewing: 4, offers: 2, rejected: 3, removed: 1 }
 function getStatusCounts(jobs = []) {
   const counts = {};
   for (const j of jobs) {
-    const s = String(j.currentStatus || "").toLowerCase() || "unknown";
+    const s = mapStatusToStandard(j.currentStatus);
     counts[s] = (counts[s] || 0) + 1;
   }
   return counts;
@@ -126,33 +143,64 @@ function ClientList({ clients = [], selected, onSelect }) {
 }
 
 function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClick }) {
-  // Show common statuses first, then any extra in alpha order.
-  const commonOrder = ["applied", "interviewing", "rejected", "offer", "hired", "on-hold"];
+  // Always show common statuses, even if they have 0 counts
+  const commonOrder = ["saved", "applied", "interviewing", "offers", "rejected", "removed"];
+  
+  // Create a complete status object with all common statuses, defaulting to 0
+  const allStatuses = {};
+  commonOrder.forEach(status => {
+    allStatuses[status] = counts[status] || 0;
+  });
+  
+  // Add any extra statuses that exist in counts but aren't in common order
+  Object.keys(counts).forEach(status => {
+    if (!commonOrder.includes(status)) {
+      allStatuses[status] = counts[status];
+    }
+  });
+  
   const keys = [
-    ...commonOrder.filter((k) => counts[k]),
-    ...Object.keys(counts)
+    ...commonOrder.filter((k) => allStatuses.hasOwnProperty(k)),
+    ...Object.keys(allStatuses)
       .filter((k) => !commonOrder.includes(k))
       .sort(),
   ];
+  
   return (
-    <div className="sticky top-0 z-10 mb-3 w-full border border-slate-200 bg-white/80 backdrop-blur px-3 py-2 rounded-lg">
+    <div className="sticky top-0 z-10 mb-3 w-full border border-slate-200 bg-white px-3 py-2 rounded-lg">
       <div className="flex flex-wrap items-center gap-2">
         {keys.length === 0 ? (
           <span className="text-xs text-slate-500">No jobs for this client.</span>
         ) : (
-          keys.map((k) => (
-            <span
-              key={k}
-              className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
-                onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
-              }`}
-              title={`Click to view ${k} jobs`}
-              onClick={onStatusClick ? () => onStatusClick(k) : undefined}
-            >
-              <span className="capitalize">{k}</span>
-              <span className="rounded bg-slate-100 px-1.5">{counts[k]}</span>
-            </span>
-          ))
+          keys.map((k) => {
+            // Special handling for "applied" status when date is filtered
+            const isAppliedWithDate = k === "applied" && filterDate && dateAppliedCount > 0;
+            const displayCount = isAppliedWithDate ? dateAppliedCount : allStatuses[k];
+            const title = isAppliedWithDate 
+              ? `Applied on ${new Date(filterDate).toLocaleDateString('en-GB')}: ${dateAppliedCount} jobs`
+              : `Click to view ${k} jobs`;
+            
+            return (
+              <span
+                key={k}
+                className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
+                  onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
+                } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''} ${allStatuses[k] === 0 ? 'opacity-60' : ''}`}
+                title={title}
+                onClick={onStatusClick ? () => onStatusClick(k) : undefined}
+              >
+                <span className="capitalize">{k}</span>
+                <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : allStatuses[k] === 0 ? 'bg-slate-200 text-slate-500' : 'bg-slate-100'}`}>
+                  {displayCount}
+                </span>
+                {isAppliedWithDate && (
+                  <span className="text-xs text-blue-600 font-medium">
+                    (on {new Date(filterDate).toLocaleDateString('en-GB')})
+                  </span>
+                )}
+              </span>
+            );
+          })
         )}
 
       </div>
@@ -297,10 +345,93 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
+function ClientDetailsSection({ clientEmail, clientDetails }) {
+  if (!clientDetails) {
+    return (
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <div className="text-sm text-slate-600">
+          <span className="font-medium">Client Details:</span> No profile information available. 
+          <span className="text-blue-600 ml-1">Click "Personal Details" to add information.</span>
+        </div>
+      </div>
+    );
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === "") return "Not set";
+    try {
+      // Handle different date formats
+      let date;
+      if (dateString.includes('/')) {
+        // Handle format like "9/7/2025, 1:55:57 PM"
+        date = new Date(dateString);
+      } else if (dateString.includes('-')) {
+        // Handle format like "2025-11-01"
+        date = new Date(dateString);
+      } else {
+        // Try parsing as is
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+      
+      return date.toLocaleDateString('en-GB');
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-md">
+      <h3 className="text-sm font-semibold text-slate-700 mb-3">Client Information</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Team Lead</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {clientDetails.dashboardTeamLeadName || "Not specified"}
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Intern Name</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {clientDetails.dashboardInternName || "Not specified"}
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plan Type</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {clientDetails.planType || "Not specified"}
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Onboarding Date</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {formatDate(clientDetails.onboardingDate)}
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Deadline</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {formatDate(clientDetails.jobDeadline)}
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Name</label>
+          <p className="text-sm text-slate-900 mt-1">
+            {clientDetails.name || clientEmail.split('@')[0]}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RightAppliedColumn({ jobs = [], title = "Applied" }) {
   const sorted = useMemo(() => [...jobs].sort(sortByUpdatedDesc), [jobs]);
   return (
-    <div className="w-64 border-l border-slate-200 p-3">
+    <div className="w-64 border-l border-slate-200 p-3 bg-white shadow-sm">
       <h3 className="mb-2 text-base font-semibold text-slate-800">
         {title} <span className="text-slate-500">({sorted.length})</span>
       </h3>
@@ -421,7 +552,8 @@ export default function Monitor() {
         const current = String(job.currentStatus || "").toLowerCase();
         const last = getLastTimelineStatus(job.timeline || []);
         const status = current || last || "unknown";
-        return status === selectedStatus;
+        const mappedStatus = mapStatusToStandard(status);
+        return mappedStatus === selectedStatus;
       }).sort(sortByUpdatedDesc);
     } catch (error) {
       console.error('Error filtering jobs by status:', error);
@@ -444,9 +576,10 @@ export default function Monitor() {
   }
 
   return (
-    <div className="flex min-h-[500px] rounded-xl border border-slate-200 bg-white relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
       {/* Left: Clients Button - Sliding Panel */}
-      <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-slate-50`}>
+      <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-blue-50`}>
         <div className="w-64 p-3">
           <button
             onClick={() => setShowClients(true)}
@@ -482,7 +615,7 @@ export default function Monitor() {
       </button>
 
       {/* Middle: Content Area */}
-      <div className="flex-1 overflow-auto border-r border-slate-200 p-4">
+      <div className="flex-1 overflow-auto border-r border-slate-200 p-4 bg-slate-50">
         {loading && <div className="text-slate-700">Loading…</div>}
         {!loading && err && <div className="text-red-600">Error: {err}</div>}
 
@@ -550,6 +683,14 @@ export default function Monitor() {
               />
             </div>
 
+            {/* Client Details Section */}
+            <div className="ml-8 mb-6">
+              <ClientDetailsSection 
+                clientEmail={selectedClient}
+                clientDetails={clientDetails[selectedClient]}
+              />
+            </div>
+
             {/* Header Section */}
             <div className="mb-6">
               {/* Title and Personal Details Row */}
@@ -588,12 +729,22 @@ export default function Monitor() {
                   className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {filterDate && (
-                  <button
-                    onClick={() => setFilterDate("")}
-                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    Clear
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setFilterDate("")}
+                      className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                      <span className="text-sm font-medium text-blue-800">
+                        Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
+                      </span>
+                      <span className="text-sm font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded">
+                        {dateAppliedCount}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -630,10 +781,12 @@ export default function Monitor() {
 
       {/* Right: Jobs filtered by selected status */}
       {selectedClient && !showClients && rightSidebarOpen && (
-        <RightAppliedColumn 
-          jobs={selectedStatus ? statusFilteredJobs : appliedJobs} 
-          title={selectedStatus ? selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1) : "Applied"}
-        />
+        <div className="bg-blue-50">
+          <RightAppliedColumn 
+            jobs={selectedStatus ? statusFilteredJobs : appliedJobs} 
+            title={selectedStatus ? selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1) : "Applied"}
+          />
+        </div>
       )}
 
       {/* Job Details Modal */}
@@ -646,6 +799,7 @@ export default function Monitor() {
         }}
       />
       
+      </div>
     </div>
   );
 }
