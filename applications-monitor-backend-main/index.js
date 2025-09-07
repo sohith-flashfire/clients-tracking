@@ -42,6 +42,26 @@ app.get('/api/cors-test', (req, res) => {
     });
 });
 
+// CORS test for POST requests
+app.post('/api/cors-test', (req, res) => {
+    res.json({ 
+        message: 'CORS POST is working!', 
+        origin: req.headers.origin,
+        body: req.body,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Add CORS headers manually for debugging
+app.use((req, res, next) => {
+    console.log(`🌐 Request: ${req.method} ${req.path} from origin: ${req.headers.origin}`);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+});
+
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
