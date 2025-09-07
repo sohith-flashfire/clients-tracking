@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import ClientDetails from "./ClientDetails";
 
-const API_BASE = "http://localhost:8086";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
 
 // ---------------- API ----------------
 async function fetchAllJobs() {
@@ -334,7 +334,7 @@ export default function Monitor() {
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const response = await fetch(`http://localhost:8086/api/clients/${encodeURIComponent(email)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`);
       if (response.ok) {
         const data = await response.json();
         return data.client;
