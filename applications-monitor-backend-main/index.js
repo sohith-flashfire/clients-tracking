@@ -22,12 +22,25 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN ?
     ['http://localhost:5173', 'https://dashboard-tracking-six.vercel.app'];
 const SESSION_KEY_DURATION = parseInt(process.env.SESSION_KEY_DURATION) || 24;
 
+console.log('🌐 CORS Configuration:');
+console.log('  - CORS_ORIGIN env var:', process.env.CORS_ORIGIN);
+console.log('  - Final CORS origins:', CORS_ORIGIN);
+
 const app = express();
 app.use(cors({
     origin: CORS_ORIGIN,
     credentials: true
 }));
 app.use(express.json());
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+    res.json({ 
+        message: 'CORS is working!', 
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString()
+    });
+});
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
