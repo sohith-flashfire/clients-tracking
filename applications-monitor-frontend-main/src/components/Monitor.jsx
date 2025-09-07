@@ -788,7 +788,6 @@ export default function Monitor() {
           />
         </div>
       )}
-
       {/* Job Details Modal */}
       <JobDetailsModal 
         job={selectedJob}
