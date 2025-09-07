@@ -86,6 +86,17 @@ export const ClientSchema = new mongoose.Schema({
       default: ""
     }
   },
+  amountPaid: {
+    type: Number,
+    required: false,
+    default: 0
+  },
+  modeOfPayment: {
+    type: String,
+    enum: ["paypal", "wire_transfer", "inr"],
+    required: false,
+    default: "paypal"
+  },
   createdAt: {
     type: String,
     default: () => new Date().toLocaleString('en-US', 'Asia/Kolkata'),

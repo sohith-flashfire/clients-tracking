@@ -23,7 +23,9 @@ const ClientDetails = ({ clientEmail, onClose }) => {
     gmailCredentials: {
       email: '',
       password: ''
-    }
+    },
+    amountPaid: 0,
+    modeOfPayment: 'paypal'
   });
 
   useEffect(() => {
@@ -46,6 +48,7 @@ const ClientDetails = ({ clientEmail, onClose }) => {
   const fetchClientDetails = async () => {
     try {
       setLoading(true);
+      
       const response = await fetch(`${API_BASE}/api/clients/${encodeURIComponent(clientEmail)}`);
       if (response.ok) {
         const data = await response.json();
@@ -67,7 +70,9 @@ const ClientDetails = ({ clientEmail, onClose }) => {
           gmailCredentials: {
             email: data.client.gmailCredentials?.email || '',
             password: data.client.gmailCredentials?.password || ''
-          }
+          },
+          amountPaid: data.client.amountPaid || 0,
+          modeOfPayment: data.client.modeOfPayment || 'paypal'
         });
       } else {
         // Client doesn't exist, show empty form for creation
@@ -103,10 +108,11 @@ const ClientDetails = ({ clientEmail, onClose }) => {
   const handleSave = async () => {
     try {
       setLoading(true);
+      
       const response = await fetch(`${API_BASE}/api/clients`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData),
       });
@@ -115,11 +121,12 @@ const ClientDetails = ({ clientEmail, onClose }) => {
         const data = await response.json();
         setClient(data.client);
         setIsEditing(false);
+        alert('Client details saved successfully!');
       } else {
-        console.error('Error saving client details');
+        alert('Failed to save client details. Please try again.');
       }
     } catch (error) {
-      console.error('Error saving client details:', error);
+      alert('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -214,317 +221,69 @@ const ClientDetails = ({ clientEmail, onClose }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Client Name
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                        placeholder="Enter client name"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client?.name || <span className="text-slate-400 italic">Not set</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
                       Email Address
                     </label>
                     <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
                       {clientEmail}
                     </div>
                   </div>
-
+                  
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Job Deadline
+                      Amount Paid
                     </label>
                     {isEditing ? (
-                      <input
-                        type="date"
-                        name="jobDeadline"
-                        value={formData.jobDeadline}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                      />
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-slate-500 sm:text-sm">$</span>
+                        </div>
+                        <input
+                          type="number"
+                          name="amountPaid"
+                          value={formData.amountPaid}
+                          onChange={handleInputChange}
+                          className="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
                     ) : (
                       <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client?.jobDeadline || <span className="text-slate-400 italic">Not set</span>}
+                        ${client?.amountPaid || 0}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Mode of Payment
+                    </label>
+                    {isEditing ? (
+                      <select
+                        name="modeOfPayment"
+                        value={formData.modeOfPayment}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                      >
+                        <option value="paypal">PayPal</option>
+                        <option value="wire_transfer">Wire Transfer</option>
+                        <option value="inr">INR</option>
+                      </select>
+                    ) : (
+                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700 capitalize">
+                        {client?.modeOfPayment?.replace('_', ' ') || 'Not set'}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  Team Information
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Dashboard Intern Name
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="dashboardInternName"
-                        value={formData.dashboardInternName}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                        placeholder="Enter intern name"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client?.dashboardInternName || <span className="text-slate-400 italic">Not set</span>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Right Column */}
             <div className="space-y-6">
-              <div className="bg-slate-50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Plan & Billing
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Dashboard Team Lead Name
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="dashboardTeamLeadName"
-                        value={formData.dashboardTeamLeadName}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                        placeholder="Enter team lead name"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client?.dashboardTeamLeadName || <span className="text-slate-400 italic">Not set</span>}
-                      </div>
-                    )}
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Plan Type
-                    </label>
-                    {isEditing ? (
-                      <select
-                        name="planType"
-                        value={formData.planType}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                      >
-                        {planOptions.map(option => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client ? (
-                          <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                              {client.planType.charAt(0).toUpperCase() + client.planType.slice(1)}
-                            </span>
-                            <span className="text-lg font-bold text-green-600">${client.planPrice}</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic">Not set</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Onboarding Date
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        name="onboardingDate"
-                        value={formData.onboardingDate}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                      />
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        {client?.onboardingDate ? new Date(client.onboardingDate).toLocaleDateString('en-GB') : <span className="text-slate-400 italic">Not set</span>}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Task Checklist
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="whatsappGroupMade"
-                        checked={formData.whatsappGroupMade}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.whatsappGroupMade && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      WhatsApp Group Made
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="dashboardCredentialsShared"
-                        checked={formData.dashboardCredentialsShared}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.dashboardCredentialsShared && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      Dashboard Credentials Shared
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="resumeSent"
-                        checked={formData.resumeSent}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.resumeSent && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      Resume Sent
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="coverLetterSent"
-                        checked={formData.coverLetterSent}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.coverLetterSent && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      Cover Letter Sent
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="portfolioMade"
-                        checked={formData.portfolioMade}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.portfolioMade && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      Portfolio Made
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {isEditing ? (
-                      <input
-                        type="checkbox"
-                        name="linkedinOptimization"
-                        checked={formData.linkedinOptimization}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center">
-                        {client?.linkedinOptimization && (
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <label className="text-sm font-medium text-slate-700">
-                      LinkedIn Optimization
-                    </label>
-                  </div>
-                </div>
-              </div>
 
               <div className="bg-slate-50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">

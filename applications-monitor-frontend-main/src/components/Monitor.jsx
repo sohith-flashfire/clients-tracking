@@ -5,9 +5,13 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
 
 // ---------------- API ----------------
 async function fetchAllJobs() {
+  const token = localStorage.getItem('token');
   const res = await fetch(`${API_BASE}/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
+    },
     body: JSON.stringify({"name": "John Doe"}),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
@@ -345,7 +349,103 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
-function ClientDetailsSection({ clientEmail, clientDetails }) {
+function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    dashboardTeamLeadName: '',
+    dashboardInternName: '',
+    planType: '',
+    onboardingDate: '',
+    jobDeadline: '',
+    whatsappGroupMade: false,
+    dashboardCredentialsShared: false,
+    resumeSent: false,
+    coverLetterSent: false,
+    portfolioMade: false,
+    linkedinOptimization: false
+  });
+
+  // Update form data when clientDetails change
+  useEffect(() => {
+    if (clientDetails) {
+      setFormData({
+        name: clientDetails.name || '',
+        dashboardTeamLeadName: clientDetails.dashboardTeamLeadName || '',
+        dashboardInternName: clientDetails.dashboardInternName || '',
+        planType: clientDetails.planType || '',
+        onboardingDate: clientDetails.onboardingDate || '',
+        jobDeadline: clientDetails.jobDeadline || '',
+        whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        resumeSent: clientDetails.resumeSent || false,
+        coverLetterSent: clientDetails.coverLetterSent || false,
+        portfolioMade: clientDetails.portfolioMade || false,
+        linkedinOptimization: clientDetails.linkedinOptimization || false
+      });
+    }
+  }, [clientDetails]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: clientEmail,
+          ...formData
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        // Update the client details in the parent component
+        if (result.client) {
+          // Call a callback to update the parent state
+          if (typeof onClientUpdate === 'function') {
+            onClientUpdate(clientEmail, result.client);
+          }
+        }
+        setIsEditing(false);
+      } else {
+        console.error('Failed to save client details:', response.statusText);
+        alert('Failed to save client details. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving client details:', error);
+      alert('Error saving client details. Please try again.');
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset form data to original values
+    if (clientDetails) {
+      setFormData({
+        name: clientDetails.name || '',
+        dashboardTeamLeadName: clientDetails.dashboardTeamLeadName || '',
+        dashboardInternName: clientDetails.dashboardInternName || '',
+        planType: clientDetails.planType || '',
+        onboardingDate: clientDetails.onboardingDate || '',
+        jobDeadline: clientDetails.jobDeadline || '',
+        whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        resumeSent: clientDetails.resumeSent || false,
+        coverLetterSent: clientDetails.coverLetterSent || false,
+        portfolioMade: clientDetails.portfolioMade || false,
+        linkedinOptimization: clientDetails.linkedinOptimization || false
+      });
+    }
+    setIsEditing(false);
+  };
+
   if (!clientDetails) {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
@@ -387,52 +487,132 @@ function ClientDetailsSection({ clientEmail, clientDetails }) {
     <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-md">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-700">Client Information</h3>
-        <button
-          onClick={() => {
-            setClientDetailsEmail(clientEmail);
-            setShowClientDetails(true);
-          }}
-          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
-        >
-          Edit Details
-        </button>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSave}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
+            >
+              Edit Details
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Team Lead</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.dashboardTeamLeadName || "Not specified"}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="dashboardTeamLeadName"
+              value={formData.dashboardTeamLeadName}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.dashboardTeamLeadName || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Intern Name</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.dashboardInternName || "Not specified"}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="dashboardInternName"
+              value={formData.dashboardInternName}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.dashboardInternName || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plan Type</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.planType || "Not specified"}
-          </p>
+          {isEditing ? (
+            <select
+              name="planType"
+              value={formData.planType}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select Plan</option>
+              <option value="ignite">Ignite</option>
+              <option value="professional">Professional</option>
+              <option value="executive">Executive</option>
+            </select>
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.planType || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Onboarding Date</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {formatDate(clientDetails.onboardingDate)}
-          </p>
+          {isEditing ? (
+            <input
+              type="date"
+              name="onboardingDate"
+              value={formData.onboardingDate}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {formatDate(clientDetails.onboardingDate)}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Deadline</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {formatDate(clientDetails.jobDeadline)}
-          </p>
+          {isEditing ? (
+            <input
+              type="date"
+              name="jobDeadline"
+              value={formData.jobDeadline}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {formatDate(clientDetails.jobDeadline)}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Name</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.name || clientEmail.split('@')[0]}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.name || clientEmail.split('@')[0]}
+            </p>
+          )}
         </div>
       </div>
       
@@ -441,68 +621,128 @@ function ClientDetailsSection({ clientEmail, clientDetails }) {
         <h4 className="text-sm font-semibold text-slate-700 mb-3">Task Checklist</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.whatsappGroupMade ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="whatsappGroupMade"
+                checked={formData.whatsappGroupMade}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.whatsappGroupMade ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">WhatsApp Group</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.dashboardCredentialsShared ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="dashboardCredentialsShared"
+                checked={formData.dashboardCredentialsShared}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.dashboardCredentialsShared ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">Dashboard Credentials</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.resumeSent ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="resumeSent"
+                checked={formData.resumeSent}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.resumeSent ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">Resume Sent</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.coverLetterSent ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="coverLetterSent"
+                checked={formData.coverLetterSent}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.coverLetterSent ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">Cover Letter</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.portfolioMade ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="portfolioMade"
+                checked={formData.portfolioMade}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.portfolioMade ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">Portfolio Made</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full flex items-center justify-center">
-              {clientDetails.linkedinOptimization ? (
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              ) : (
-                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="linkedinOptimization"
+                checked={formData.linkedinOptimization}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.linkedinOptimization ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
             <span className="text-xs text-slate-600">LinkedIn Optimization</span>
           </div>
         </div>
@@ -528,7 +768,7 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 }
 
 // ---------------- Main Component ----------------
-export default function Monitor() {
+export default function Monitor({ onClose }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -545,13 +785,46 @@ export default function Monitor() {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientDetails, setClientDetails] = useState({});
 
+  // Validate token
+  const validateToken = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return false;
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        // Token is invalid or expired
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return false;
+      }
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  };
+
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` })
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         return data.client;
+      } else {
+        console.error('Failed to fetch client details:', response.status);
       }
     } catch (error) {
       console.error('Error fetching client details:', error);
@@ -559,25 +832,39 @@ export default function Monitor() {
     return null;
   };
 
+  // Update client details in state
+  const handleClientUpdate = (email, updatedClient) => {
+    setClientDetails(prev => ({
+      ...prev,
+      [email]: updatedClient
+    }));
+  };
+
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
+        
+        
         const data = await fetchAllJobs();
         setJobs(data);
         
-        // Fetch client details for all clients
-        const clientEmails = [...new Set(data.map(j => j.userID).filter(Boolean))];
-        const clientDetailsMap = {};
+        // Fetch all clients directly from the API
+        const clientsResponse = await fetch(`${API_BASE}/api/clients`);
         
-        for (const email of clientEmails) {
-          const details = await fetchClientDetails(email);
-          if (details) {
-            clientDetailsMap[email] = details;
-          }
+        if (clientsResponse.ok) {
+          const clientsData = await clientsResponse.json();
+          const clientDetailsMap = {};
+          
+          // Store client details for each client
+          clientsData.clients.forEach(client => {
+            clientDetailsMap[client.email] = client;
+          });
+          
+          setClientDetails(clientDetailsMap);
+        } else {
+          setErr("Failed to fetch client data");
         }
-        
-        setClientDetails(clientDetailsMap);
       } catch (e) {
         setErr(e.message || "Failed to fetch");
       } finally {
@@ -588,10 +875,9 @@ export default function Monitor() {
 
   // Left column: clients
   const clients = useMemo(() => {
-    const set = new Set();
-    jobs.forEach((j) => j.userID && set.add(j.userID));
-    return [...set];
-  }, [jobs]);
+    // Get all clients from the clientDetails state
+    return Object.keys(clientDetails);
+  }, [clientDetails]);
 
   // Removed auto-selection - user will manually select from client cards
 
@@ -660,6 +946,41 @@ export default function Monitor() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      {/* Top Right Buttons */}
+      <div className="absolute top-4 right-4 z-30 flex gap-2">
+        {/* Back to Dashboard Button - Only for Admin Users */}
+        {(() => {
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          if (user.role === 'admin') {
+            return (
+              <button
+                onClick={() => {
+                  // Go back to admin dashboard
+                  if (onClose) onClose();
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
+              >
+                Back to Dashboard
+              </button>
+            );
+          }
+          return null;
+        })()}
+        
+        {/* Logout Button */}
+        <button
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (onClose) onClose();
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium shadow-lg"
+        >
+          Logout
+        </button>
+      </div>
+      
       <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
       {/* Left: Clients Button - Sliding Panel */}
       <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-blue-50`}>
@@ -699,8 +1020,23 @@ export default function Monitor() {
 
       {/* Middle: Content Area */}
       <div className="flex-1 overflow-auto border-r border-slate-200 p-4 bg-slate-50">
+        
         {loading && <div className="text-slate-700">Loading…</div>}
-        {!loading && err && <div className="text-red-600">Error: {err}</div>}
+        {!loading && err && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <div className="text-red-600 font-semibold mb-2">Error: {err}</div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Go to Login
+            </button>
+          </div>
+        )}
 
         {!loading && !err && showClients && (
           <div>
@@ -771,6 +1107,7 @@ export default function Monitor() {
               <ClientDetailsSection 
                 clientEmail={selectedClient}
                 clientDetails={clientDetails[selectedClient]}
+                onClientUpdate={handleClientUpdate}
               />
             </div>
 
