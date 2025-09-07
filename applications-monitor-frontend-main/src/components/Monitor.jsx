@@ -181,15 +181,15 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
               : `Click to view ${k} jobs`;
             
             return (
-              <span
-                key={k}
+            <span
+              key={k}
                 className={`inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-700 ${
                   onStatusClick ? 'cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors' : ''
                 } ${isAppliedWithDate ? 'border-blue-300 bg-blue-50' : ''} ${allStatuses[k] === 0 ? 'opacity-60' : ''}`}
                 title={title}
                 onClick={onStatusClick ? () => onStatusClick(k) : undefined}
-              >
-                <span className="capitalize">{k}</span>
+            >
+              <span className="capitalize">{k}</span>
                 <span className={`rounded px-1.5 ${isAppliedWithDate ? 'bg-blue-200 text-blue-800 font-semibold' : allStatuses[k] === 0 ? 'bg-slate-200 text-slate-500' : 'bg-slate-100'}`}>
                   {displayCount}
                 </span>
@@ -198,7 +198,7 @@ function StatusBar({ counts = {}, dateAppliedCount = 0, filterDate, onStatusClic
                     (on {new Date(filterDate).toLocaleDateString('en-GB')})
                   </span>
                 )}
-              </span>
+            </span>
             );
           })
         )}
@@ -287,12 +287,12 @@ function JobDetailsModal({ job, isOpen, onClose }) {
               {typeof job.jobDescription === "string" ? (
                 <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
                   {job.jobDescription}
-                </div>
+      </div>
               ) : (
                 <div className="text-slate-500 italic">
                   No job description available
-                </div>
-              )}
+        </div>
+      )}
             </div>
           </div>
         </div>
@@ -345,7 +345,103 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
-function ClientDetailsSection({ clientEmail, clientDetails }) {
+function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    dashboardTeamLeadName: '',
+    dashboardInternName: '',
+    planType: '',
+    onboardingDate: '',
+    jobDeadline: '',
+    whatsappGroupMade: false,
+    dashboardCredentialsShared: false,
+    resumeSent: false,
+    coverLetterSent: false,
+    portfolioMade: false,
+    linkedinOptimization: false
+  });
+
+  // Update form data when clientDetails change
+  useEffect(() => {
+    if (clientDetails) {
+      setFormData({
+        name: clientDetails.name || '',
+        dashboardTeamLeadName: clientDetails.dashboardTeamLeadName || '',
+        dashboardInternName: clientDetails.dashboardInternName || '',
+        planType: clientDetails.planType || '',
+        onboardingDate: clientDetails.onboardingDate || '',
+        jobDeadline: clientDetails.jobDeadline || '',
+        whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        resumeSent: clientDetails.resumeSent || false,
+        coverLetterSent: clientDetails.coverLetterSent || false,
+        portfolioMade: clientDetails.portfolioMade || false,
+        linkedinOptimization: clientDetails.linkedinOptimization || false
+      });
+    }
+  }, [clientDetails]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: clientEmail,
+          ...formData
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        // Update the client details in the parent component
+        if (result.client) {
+          // Call a callback to update the parent state
+          if (typeof onClientUpdate === 'function') {
+            onClientUpdate(clientEmail, result.client);
+          }
+        }
+        setIsEditing(false);
+      } else {
+        console.error('Failed to save client details:', response.statusText);
+        alert('Failed to save client details. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving client details:', error);
+      alert('Error saving client details. Please try again.');
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset form data to original values
+    if (clientDetails) {
+      setFormData({
+        name: clientDetails.name || '',
+        dashboardTeamLeadName: clientDetails.dashboardTeamLeadName || '',
+        dashboardInternName: clientDetails.dashboardInternName || '',
+        planType: clientDetails.planType || '',
+        onboardingDate: clientDetails.onboardingDate || '',
+        jobDeadline: clientDetails.jobDeadline || '',
+        whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        resumeSent: clientDetails.resumeSent || false,
+        coverLetterSent: clientDetails.coverLetterSent || false,
+        portfolioMade: clientDetails.portfolioMade || false,
+        linkedinOptimization: clientDetails.linkedinOptimization || false
+      });
+    }
+    setIsEditing(false);
+  };
+
   if (!clientDetails) {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
@@ -385,43 +481,266 @@ function ClientDetailsSection({ clientEmail, clientDetails }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-md">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Client Information</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-slate-700">Client Information</h3>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <button
+                onClick={handleSave}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
+            >
+              Edit Details
+            </button>
+          )}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Team Lead</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.dashboardTeamLeadName || "Not specified"}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="dashboardTeamLeadName"
+              value={formData.dashboardTeamLeadName}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.dashboardTeamLeadName || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Intern Name</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.dashboardInternName || "Not specified"}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="dashboardInternName"
+              value={formData.dashboardInternName}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.dashboardInternName || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plan Type</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.planType || "Not specified"}
-          </p>
+          {isEditing ? (
+            <select
+              name="planType"
+              value={formData.planType}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select Plan</option>
+              <option value="ignite">Ignite</option>
+              <option value="professional">Professional</option>
+              <option value="executive">Executive</option>
+            </select>
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.planType || "Not specified"}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Onboarding Date</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {formatDate(clientDetails.onboardingDate)}
-          </p>
+          {isEditing ? (
+            <input
+              type="date"
+              name="onboardingDate"
+              value={formData.onboardingDate}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {formatDate(clientDetails.onboardingDate)}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Deadline</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {formatDate(clientDetails.jobDeadline)}
-          </p>
+          {isEditing ? (
+            <input
+              type="date"
+              name="jobDeadline"
+              value={formData.jobDeadline}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {formatDate(clientDetails.jobDeadline)}
+            </p>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Name</label>
-          <p className="text-sm text-slate-900 mt-1">
-            {clientDetails.name || clientEmail.split('@')[0]}
-          </p>
+          {isEditing ? (
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.name || clientEmail.split('@')[0]}
+            </p>
+          )}
+        </div>
+      </div>
+      
+      {/* Task Checklist Section */}
+      <div className="mt-6 pt-4 border-t border-slate-200">
+        <h4 className="text-sm font-semibold text-slate-700 mb-3">Task Checklist</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="whatsappGroupMade"
+                checked={formData.whatsappGroupMade}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.whatsappGroupMade ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">WhatsApp Group</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="dashboardCredentialsShared"
+                checked={formData.dashboardCredentialsShared}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.dashboardCredentialsShared ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">Dashboard Credentials</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="resumeSent"
+                checked={formData.resumeSent}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.resumeSent ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">Resume Sent</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="coverLetterSent"
+                checked={formData.coverLetterSent}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.coverLetterSent ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">Cover Letter</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="portfolioMade"
+                checked={formData.portfolioMade}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.portfolioMade ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">Portfolio Made</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isEditing ? (
+              <input
+                type="checkbox"
+                name="linkedinOptimization"
+                checked={formData.linkedinOptimization}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+            ) : (
+              <div className="w-3 h-3 rounded-full flex items-center justify-center">
+                {clientDetails.linkedinOptimization ? (
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                ) : (
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                )}
+              </div>
+            )}
+            <span className="text-xs text-slate-600">LinkedIn Optimization</span>
+          </div>
         </div>
       </div>
     </div>
@@ -474,6 +793,14 @@ export default function Monitor() {
       console.error('Error fetching client details:', error);
     }
     return null;
+  };
+
+  // Update client details in state
+  const handleClientUpdate = (email, updatedClient) => {
+    setClientDetails(prev => ({
+      ...prev,
+      [email]: updatedClient
+    }));
   };
 
   useEffect(() => {
@@ -567,7 +894,7 @@ export default function Monitor() {
   };
 
   if (showClientDetails) {
-    return (
+  return (
       <ClientDetails 
         clientEmail={clientDetailsEmail} 
         onClose={handleCloseClientDetails}
@@ -666,10 +993,10 @@ export default function Monitor() {
           <>
             {/* Slim status bar */}
             <div className="ml-8">
-              <StatusBar
-                counts={statusCounts}
-                dateAppliedCount={dateAppliedCount}
-                filterDate={filterDate}
+            <StatusBar
+              counts={statusCounts}
+              dateAppliedCount={dateAppliedCount}
+              filterDate={filterDate}
                 onStatusClick={(status) => {
                   // Toggle functionality: if same status is clicked, close panel
                   if (selectedStatus === status && rightSidebarOpen) {
@@ -688,6 +1015,7 @@ export default function Monitor() {
               <ClientDetailsSection 
                 clientEmail={selectedClient}
                 clientDetails={clientDetails[selectedClient]}
+                onClientUpdate={handleClientUpdate}
               />
             </div>
 
@@ -730,12 +1058,12 @@ export default function Monitor() {
                 />
                 {filterDate && (
                   <>
-                    <button
-                      onClick={() => setFilterDate("")}
+                  <button
+                    onClick={() => setFilterDate("")}
                       className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                    >
-                      Clear
-                    </button>
+                  >
+                    Clear
+                  </button>
                     <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
                       <span className="text-sm font-medium text-blue-800">
                         Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
