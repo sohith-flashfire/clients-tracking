@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "flashfire-tracking-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API for FlashFire Client Tracking Portal",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,9 +10,9 @@
     "build": "echo \"Backend build completed\"",
     "prod": "NODE_ENV=production node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["tracking", "portal", "api", "authentication", "mongodb"],
+  "author": "FlashFire Team",
+  "license": "UNLICENSED",
   "type": "module",
   "dependencies": {
     "bcryptjs": "^3.0.2",

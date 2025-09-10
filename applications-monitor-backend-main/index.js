@@ -4,86 +4,47 @@ import { JobModel } from './JobModel.js';
 import { ClientModel } from './ClientModel.js';
 import { UserModel } from './UserModel.js';
 import { SessionKeyModel } from './SessionKeyModel.js';
+import cors from 'cors'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import cors from 'cors'
 import 'dotenv/config';
 
 
 
 
 // Environment Variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const PORT = process.env.PORT || 8086;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/applications-monitor';
-const ADMIN_EMAILS = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : ['tripathipranjal01@gmail.com', 'adit.jain606@gmail.com'];
-const CORS_ORIGIN = process.env.CORS_ORIGIN ? 
-    process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : 
-    ['http://localhost:5173', 'https://dashboard-tracking-six.vercel.app'];
-const SESSION_KEY_DURATION = parseInt(process.env.SESSION_KEY_DURATION) || 24;
-
-console.log('🌐 CORS Configuration:');
-console.log('  - CORS_ORIGIN env var:', process.env.CORS_ORIGIN);
-console.log('  - Final CORS origins:', CORS_ORIGIN);
+const JWT_SECRET = process.env.JWT_SECRET || 'flashfire_secret_key_2024';
 
 const app = express();
 app.use(cors({
-    origin: CORS_ORIGIN,
-    credentials: true
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true
 }));
 app.use(express.json());
 
-// CORS test endpoint
-app.get('/api/cors-test', (req, res) => {
-    res.json({ 
-        message: 'CORS is working!', 
-        origin: req.headers.origin,
-        timestamp: new Date().toISOString()
-    });
-});
-
-// CORS test for POST requests
-app.post('/api/cors-test', (req, res) => {
-    res.json({ 
-        message: 'CORS POST is working!', 
-        origin: req.headers.origin,
-        body: req.body,
-        timestamp: new Date().toISOString()
-    });
-});
-
-// Add CORS headers manually for debugging
-app.use((req, res, next) => {
-    console.log(`🌐 Request: ${req.method} ${req.path} from origin: ${req.headers.origin}`);
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    next();
-});
-
-// Authentication middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
-  });
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid token.' });
+  }
 };
 
-// Admin middleware
-const requireAdmin = (req, res, next) => {
+// Middleware to check admin role
+const verifyAdmin = (req, res, next) => {
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
+    return res.status(403).json({ error: 'Access denied. Admin role required.' });
   }
   next();
 };
@@ -105,6 +66,66 @@ const ConnectDB = () => mongoose.connect(process.env.MONGODB_URI, {
                                         process.exit(1);
                                     });
 ConnectDB();
+
+// Initialize admin users
+const initializeAdminUsers = async () => {
+  try {
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [];
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    
+    if (adminEmails.length === 0) {
+      console.log('⚠️  No admin emails configured. Set ADMIN_EMAILS environment variable.');
+      return;
+    }
+    
+    for (const email of adminEmails) {
+      const existingAdmin = await UserModel.findOne({ email: email.toLowerCase().trim() });
+      
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        const admin = new UserModel({
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: 'admin',
+          updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+        });
+        
+        await admin.save();
+        console.log(`✅ Admin user created: ${email}`);
+      } else {
+        console.log(`ℹ️  Admin user already exists: ${email}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error initializing admin users:', error);
+  }
+};
+
+// Clean up invalid session keys
+const cleanupSessionKeys = async () => {
+  try {
+    // Try to drop and recreate the collection to fix index issues
+    try {
+      await SessionKeyModel.collection.drop();
+      console.log('🗑️  Dropped sessionkeys collection');
+    } catch (dropError) {
+      // Collection might not exist, that's okay
+      console.log('ℹ️  Sessionkeys collection did not exist');
+    }
+    
+    // Recreate the collection
+    await SessionKeyModel.createCollection();
+    console.log('✅ Recreated sessionkeys collection with proper indexes');
+  } catch (error) {
+    console.error('❌ Error cleaning up session keys:', error);
+  }
+};
+
+// Initialize admin users after database connection
+setTimeout(async () => {
+  await initializeAdminUsers();
+  await cleanupSessionKeys();
+}, 2000);
         //get all the jobdatabase data..
 const getAllJobs = async (req, res)=> {
     const jobDB = await JobModel.find();
@@ -114,43 +135,9 @@ const getAllJobs = async (req, res)=> {
 // Client management endpoints
 const getAllClients = async (req, res) => {
     try {
-        console.log('📊 getAllClients: Starting to fetch job applications...');
-        
-        // Get all job applications from jobdbs collection (READ ONLY)
-        const jobApplications = await JobModel.find();
-        console.log(`📊 getAllClients: Found ${jobApplications.length} job applications`);
-        
-        // Group by userID (email) to get unique clients
-        const clientMap = {};
-        jobApplications.forEach(job => {
-            const userID = job.userID;
-            if (!clientMap[userID]) {
-                clientMap[userID] = {
-                    email: userID,
-                    name: userID.split('@')[0], // Use email prefix as name
-                    jobApplications: []
-                };
-            }
-            clientMap[userID].jobApplications.push({
-                jobID: job.jobID,
-                jobTitle: job.jobTitle,
-                companyName: job.companyName,
-                currentStatus: job.currentStatus,
-                dateAdded: job.dateAdded,
-                joblink: job.joblink,
-                jobDescription: job.jobDescription,
-                timeline: job.timeline,
-                attachments: job.attachments
-            });
-        });
-        
-        // Convert to array format
-        const clients = Object.values(clientMap);
-        console.log(`📊 getAllClients: Returning ${clients.length} unique clients`);
-        
+        const clients = await ClientModel.find();
         res.status(200).json({clients});
     } catch (error) {
-        console.error('❌ getAllClients Error:', error);
         res.status(500).json({error: error.message});
     }
 }
@@ -158,194 +145,17 @@ const getAllClients = async (req, res) => {
 const getClientByEmail = async (req, res) => {
     try {
         const { email } = req.params;
-        
-        // Get all job applications for this user from jobdbs collection (READ ONLY)
-        const jobApplications = await JobModel.find({ userID: email.toLowerCase() });
-        
-        if (jobApplications.length === 0) {
+        const client = await ClientModel.findOne({ email: email.toLowerCase() });
+        if (!client) {
             return res.status(404).json({error: 'Client not found'});
         }
-        
-        // Create client object with job applications
-        const client = {
-            email: email.toLowerCase(),
-            name: email.split('@')[0], // Use email prefix as name
-            jobApplications: jobApplications.map(job => ({
-                jobID: job.jobID,
-                jobTitle: job.jobTitle,
-                companyName: job.companyName,
-                currentStatus: job.currentStatus,
-                dateAdded: job.dateAdded,
-                joblink: job.joblink,
-                jobDescription: job.jobDescription,
-                timeline: job.timeline,
-                attachments: job.attachments
-            }))
-        };
-        
         res.status(200).json({client});
     } catch (error) {
         res.status(500).json({error: error.message});
     }
 }
 
-// Authentication routes
-const login = async (req, res) => {
-    try {
-        const { email, password, sessionKey } = req.body;
-        
-        // Find user
-        const user = await UserModel.findOne({ email: email.toLowerCase() });
-        if (!user || !user.isActive) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        // Check password
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        // Check if user is admin
-        const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-        
-        // If user is not admin, session key is required
-        if (!isAdmin) {
-            if (!sessionKey) {
-                return res.status(200).json({ 
-                    message: 'Session key required',
-                    requiresSessionKey: true,
-                    user: {
-                        email: user.email,
-                        role: user.role
-                    }
-                });
-            }
-            
-            const sessionKeyDoc = await SessionKeyModel.findOne({ 
-                email: email.toLowerCase(), 
-                sessionKey,
-                isUsed: false,
-                expiresAt: { $gt: new Date() }
-            });
-            
-            if (!sessionKeyDoc) {
-                return res.status(401).json({ error: 'Invalid or expired session key' });
-            }
-            
-            // Mark session key as used
-            sessionKeyDoc.isUsed = true;
-            sessionKeyDoc.usedAt = new Date().toLocaleString('en-US', 'Asia/Kolkata');
-            await sessionKeyDoc.save();
-        }
-        
-        // Generate JWT token
-        const token = jwt.sign(
-            { 
-                userId: user._id, 
-                email: user.email, 
-                role: user.role 
-            },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-        
-        res.status(200).json({
-            token,
-            user: {
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const createUser = async (req, res) => {
-    try {
-        const { email, password, role = 'user' } = req.body;
-        
-        // Check if user already exists
-        const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
-        if (existingUser) {
-            return res.status(400).json({ error: 'User already exists' });
-        }
-        
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // Create user
-        const user = new UserModel({
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            role,
-            updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
-        });
-        
-        await user.save();
-        
-        res.status(201).json({
-            message: 'User created successfully',
-            user: {
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const generateSessionKey = async (req, res) => {
-    try {
-        const { email, duration = SESSION_KEY_DURATION } = req.body;
-        
-        // Generate more random session key using crypto
-        const crypto = await import('crypto');
-        const sessionKey = crypto.randomBytes(16).toString('hex').toUpperCase();
-        
-        // Calculate expiration time
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + parseInt(duration));
-        
-        // Create session key document
-        const sessionKeyDoc = new SessionKeyModel({
-            email: email.toLowerCase(),
-            sessionKey,
-            expiresAt
-        });
-        
-        await sessionKeyDoc.save();
-        
-        res.status(201).json({
-            message: 'Session key generated successfully',
-            sessionKey,
-            expiresAt: expiresAt.toLocaleString('en-US', 'Asia/Kolkata')
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const getAllUsers = async (req, res) => {
-    try {
-        const users = await UserModel.find({}, { password: 0 });
-        res.status(200).json({ users });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const deleteUser = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await UserModel.findByIdAndDelete(id);
-        res.status(200).json({ message: 'User deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+// (Auth routes removed)
 
 const createOrUpdateClient = async (req, res) => {
     try {
@@ -391,15 +201,292 @@ const createOrUpdateClient = async (req, res) => {
     }
 }
 
+// Authentication endpoints
+const login = async (req, res) => {
+  try {
+    const { email, password, sessionKey } = req.body;
+    
+    // Find user
+    const user = await UserModel.findOne({ email: email.toLowerCase() });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // If user is team_lead, verify session key
+    if (user.role === 'team_lead') {
+      if (!sessionKey) {
+        return res.status(400).json({ error: 'Session key required for team leads' });
+      }
+
+      const sessionKeyDoc = await SessionKeyModel.findOne({ 
+        key: sessionKey, 
+        userEmail: email.toLowerCase(),
+        isUsed: false,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (!sessionKeyDoc) {
+        return res.status(401).json({ error: 'Invalid or expired session key' });
+      }
+
+      // Mark session key as used
+      sessionKeyDoc.isUsed = true;
+      sessionKeyDoc.usedAt = new Date().toLocaleString('en-US', 'Asia/Kolkata');
+      await sessionKeyDoc.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id, 
+        email: user.email, 
+        role: user.role 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      token,
+      user: {
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create a new user (admin only)
+const createUser = async (req, res) => {
+  try {
+    const { email, password, role = 'team_lead' } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new UserModel({
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role,
+      updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+    });
+
+    await user.save();
+    res.status(201).json({ 
+      message: 'User created successfully',
+      user: {
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Generate session key (admin only)
+const generateSessionKey = async (req, res) => {
+  try {
+    const { userEmail } = req.body;
+    
+    // Check if user exists and is team_lead
+    const user = await UserModel.findOne({ 
+      email: userEmail.toLowerCase(), 
+      role: 'team_lead',
+      isActive: true 
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Team lead user not found' });
+    }
+
+    // Generate unique session key with retry logic
+    let sessionKey;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    do {
+      // Generate a more robust session key with timestamp and random
+      const timestamp = Date.now().toString(36);
+      const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+      sessionKey = `FF${timestamp}${random}`;
+      attempts++;
+      
+      // Check if this key already exists
+      const existingKey = await SessionKeyModel.findOne({ key: sessionKey });
+      if (!existingKey) break;
+      
+      if (attempts >= maxAttempts) {
+        return res.status(500).json({ error: 'Failed to generate unique session key after multiple attempts' });
+      }
+    } while (true);
+
+    const sessionKeyDoc = new SessionKeyModel({
+      key: sessionKey,
+      userEmail: userEmail.toLowerCase()
+    });
+
+    await sessionKeyDoc.save();
+
+    res.status(201).json({
+      message: 'Session key generated successfully',
+      sessionKey,
+      userEmail: userEmail.toLowerCase(),
+      expiresAt: sessionKeyDoc.expiresAt
+    });
+  } catch (error) {
+    console.error('Session key generation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all users (admin only)
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserModel.find({}, { password: 0 });
+    res.status(200).json({ users });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get session keys for a user (admin only)
+const getUserSessionKeys = async (req, res) => {
+  try {
+    const { userEmail } = req.params;
+    const sessionKeys = await SessionKeyModel.find({ 
+      userEmail: userEmail.toLowerCase() 
+    }).sort({ createdAt: -1 });
+    
+    res.status(200).json({ sessionKeys });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create a new job
+const createJob = async (req, res) => {
+    try {
+        const jobData = {
+            ...req.body,
+            createdAt: new Date().toLocaleString('en-US', 'Asia/Kolkata'),
+            updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+        };
+        
+        const job = new JobModel(jobData);
+        await job.save();
+        res.status(201).json({job});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
+// Clean up session keys endpoint (admin only)
+const cleanupSessionKeysEndpoint = async (req, res) => {
+  try {
+    // Drop the entire collection to remove corrupted indexes
+    await SessionKeyModel.collection.drop().catch(() => {
+      // Collection might not exist, that's okay
+    });
+    
+    // Recreate the collection with proper schema
+    await SessionKeyModel.createCollection();
+    
+    res.status(200).json({
+      message: 'Session keys collection reset successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Verify credentials (for two-step login)
+const verifyCredentials = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await UserModel.findOne({ 
+      email: email.toLowerCase(), 
+      isActive: true 
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    res.status(200).json({
+      message: 'Credentials verified',
+      role: user.role,
+      email: user.email
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete user (admin only)
+const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Check if user exists
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Don't allow deleting admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({ error: 'Cannot delete admin users' });
+    }
+
+    // Delete user
+    await UserModel.findByIdAndDelete(userId);
+    
+    // Also delete any session keys for this user
+    await SessionKeyModel.deleteMany({ userEmail: user.email });
+
+    res.status(200).json({
+      message: 'User deleted successfully',
+      deletedUser: { email: user.email, role: user.role }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Authentication routes
+app.post('/api/auth/verify-credentials', verifyCredentials);
 app.post('/api/auth/login', login);
-app.post('/api/auth/create-user', authenticateToken, requireAdmin, createUser);
-app.post('/api/auth/generate-session-key', authenticateToken, requireAdmin, generateSessionKey);
-app.get('/api/auth/users', authenticateToken, requireAdmin, getAllUsers);
-app.delete('/api/auth/users/:id', authenticateToken, requireAdmin, deleteUser);
+app.post('/api/auth/users', verifyToken, verifyAdmin, createUser);
+app.get('/api/auth/users', verifyToken, verifyAdmin, getAllUsers);
+app.delete('/api/auth/users/:userId', verifyToken, verifyAdmin, deleteUser);
+app.post('/api/auth/session-key', verifyToken, verifyAdmin, generateSessionKey);
+app.get('/api/auth/session-keys/:userEmail', verifyToken, verifyAdmin, getUserSessionKeys);
+app.post('/api/auth/cleanup-session-keys', verifyToken, verifyAdmin, cleanupSessionKeysEndpoint);
 
 // Job routes
 app.post('/', getAllJobs);
+app.post('/api/jobs', createJob);
 
 // Client routes
 app.get('/api/clients', getAllClients);

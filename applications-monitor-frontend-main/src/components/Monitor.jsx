@@ -5,12 +5,10 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
 
 // ---------------- API ----------------
 async function fetchAllJobs() {
-  const token = localStorage.getItem('token');
   const res = await fetch(`${API_BASE}/`, {
     method: "POST",
     headers: { 
-      "Content-Type": "application/json",
-      ...(token && { "Authorization": `Bearer ${token}` })
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({"name": "John Doe"}),
   });
@@ -785,41 +783,12 @@ export default function Monitor({ onClose }) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientDetails, setClientDetails] = useState({});
 
-  // Validate token
-  const validateToken = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return false;
-      
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      
-      if (response.status === 401 || response.status === 403) {
-        // Token is invalid or expired
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        return false;
-      }
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Token validation error:', error);
-      return false;
-    }
-  };
+  // (Auth removed)
 
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`, {
-        headers: {
-          ...(token && { "Authorization": `Bearer ${token}` })
-        }
-      });
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`);
       if (response.ok) {
         const data = await response.json();
         return data.client;
@@ -947,39 +916,7 @@ export default function Monitor({ onClose }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       {/* Top Right Buttons */}
-      <div className="absolute top-4 right-4 z-30 flex gap-2">
-        {/* Back to Dashboard Button - Only for Admin Users */}
-        {(() => {
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          if (user.role === 'admin') {
-            return (
-              <button
-                onClick={() => {
-                  // Go back to admin dashboard
-                  if (onClose) onClose();
-                }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
-              >
-                Back to Dashboard
-              </button>
-            );
-          }
-          return null;
-        })()}
-        
-        {/* Logout Button */}
-        <button
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            if (onClose) onClose();
-            window.location.reload();
-          }}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium shadow-lg"
-        >
-          Logout
-        </button>
-      </div>
+      <div className="absolute top-4 right-4 z-30 flex gap-2" />
       
       <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
       {/* Left: Clients Button - Sliding Panel */}
@@ -1025,16 +962,6 @@ export default function Monitor({ onClose }) {
         {!loading && err && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <div className="text-red-600 font-semibold mb-2">Error: {err}</div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-            >
-              Go to Login
-            </button>
           </div>
         )}
 

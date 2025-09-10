@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "flashfire-tracking-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Frontend for FlashFire Client Tracking Portal",
   "type": "module",
   "scripts": {
     "dev": "vite",

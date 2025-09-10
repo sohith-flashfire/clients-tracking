@@ -14,9 +14,9 @@ export const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["admin", "user"],
+    enum: ["admin", "team_lead"],
     required: true,
-    default: "user"
+    default: "team_lead"
   },
   isActive: {
     type: Boolean,
@@ -36,4 +36,4 @@ export const UserSchema = new mongoose.Schema({
   }
 });
 
-export const UserModel = mongoose.model('User', UserSchema);
+export const UserModel = mongoose.model('tracking_portal_users', UserSchema);

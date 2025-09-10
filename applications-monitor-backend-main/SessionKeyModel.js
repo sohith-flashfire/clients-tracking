@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
 
 export const SessionKeySchema = new mongoose.Schema({
-  email: {
+  key: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  userEmail: {
     type: String,
     required: true,
     lowercase: true,
     trim: true
-  },
-  sessionKey: {
-    type: String,
-    required: true,
-    unique: true
   },
   isUsed: {
     type: Boolean,
@@ -19,7 +19,8 @@ export const SessionKeySchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    required: true
+    required: true,
+    default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
   },
   createdAt: {
     type: String,
@@ -33,4 +34,4 @@ export const SessionKeySchema = new mongoose.Schema({
   }
 });
 
-export const SessionKeyModel = mongoose.model('SessionKey', SessionKeySchema);
+export const SessionKeyModel = mongoose.model('sessionkeys', SessionKeySchema);
