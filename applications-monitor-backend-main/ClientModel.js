@@ -49,30 +49,60 @@ export const ClientSchema = new mongoose.Schema({
     required: false,
     default: false
   },
+  whatsappGroupMadeDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
   dashboardCredentialsShared: {
     type: Boolean,
     required: false,
     default: false
+  },
+  dashboardCredentialsSharedDate: {
+    type: String,
+    required: false,
+    default: ""
   },
   resumeSent: {
     type: Boolean,
     required: false,
     default: false
   },
+  resumeSentDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
   coverLetterSent: {
     type: Boolean,
     required: false,
     default: false
+  },
+  coverLetterSentDate: {
+    type: String,
+    required: false,
+    default: ""
   },
   portfolioMade: {
     type: Boolean,
     required: false,
     default: false
   },
+  portfolioMadeDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
   linkedinOptimization: {
     type: Boolean,
     required: false,
     default: false
+  },
+  linkedinOptimizationDate: {
+    type: String,
+    required: false,
+    default: ""
   },
   gmailCredentials: {
     email: {
@@ -90,6 +120,11 @@ export const ClientSchema = new mongoose.Schema({
     type: Number,
     required: false,
     default: 0
+  },
+  amountPaidDate: {
+    type: String,
+    required: false,
+    default: ""
   },
   modeOfPayment: {
     type: String,
