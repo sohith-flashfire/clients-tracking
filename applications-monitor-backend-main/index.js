@@ -30,7 +30,7 @@ if (!JWT_SECRET) {
 
 const app = express();
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN || 'https://dashboardtracking.vercel.app',
   credentials: true
 }));
 app.use(express.json());
