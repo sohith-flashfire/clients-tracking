@@ -70,8 +70,6 @@ A comprehensive client tracking and management system with role-based authentica
 ### Backend Required Variables:
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret key for JWT token signing
-- `ADMIN_EMAILS` - Comma-separated list of admin email addresses
-- `ADMIN_PASSWORD` - Password for admin users
 - `CORS_ORIGIN` - Frontend URL for CORS configuration
 
 ### Frontend Required Variables:
@@ -91,10 +89,6 @@ NODE_ENV=development
 # JWT Configuration (REQUIRED)
 JWT_SECRET=your_super_secret_jwt_key_here
 
-# Admin Configuration (REQUIRED)
-ADMIN_EMAILS=admin1@example.com,admin2@example.com
-ADMIN_PASSWORD=your_admin_password_here
-
 # CORS Configuration (REQUIRED)
 CORS_ORIGIN=your_frontend_url_here
 ```
@@ -109,6 +103,29 @@ VITE_APP_NAME=FlashFire Portal
 VITE_APP_DESCRIPTION=Client Tracking Portal
 ```
 
+## Admin User Management
+
+Admin users are managed directly in the MongoDB database. To create or modify admin users:
+
+1. **Access your MongoDB database** (Atlas or local)
+2. **Navigate to the `tracking_portal_users` collection**
+3. **Create admin user document**:
+   ```json
+   {
+     "email": "admin@example.com",
+     "password": "$2b$10$hashed_password_here",
+     "role": "admin",
+     "isActive": true,
+     "createdAt": "current_timestamp",
+     "updatedAt": "current_timestamp"
+   }
+   ```
+4. **Hash the password** using bcrypt with salt rounds 10
+
+**Current Admin Users** (as shown in your database):
+- `tripathiranjal01@gmail.com`
+- `adit.jain606@gmail.com`
+
 ## User Roles
 
 ### Admin Users
@@ -117,11 +134,13 @@ VITE_APP_DESCRIPTION=Client Tracking Portal
 - Can generate session keys for team leads
 - Can delete team lead users
 - Access to tracking portal
+- **Note**: Admin users are managed directly in the database. No automatic creation.
 
 ### Team Lead Users
 - Access to tracking portal only
 - Require session key for login (one-time use)
 - Cannot access admin functions
+- Created by admins through the admin dashboard
 
 ## API Endpoints
 

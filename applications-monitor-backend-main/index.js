@@ -78,39 +78,8 @@ const ConnectDB = () => mongoose.connect(process.env.MONGODB_URI, {
                                     });
 ConnectDB();
 
-// Initialize admin users
-const initializeAdminUsers = async () => {
-  try {
-    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [];
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    
-    if (adminEmails.length === 0) {
-      console.log('⚠️  No admin emails configured. Set ADMIN_EMAILS environment variable.');
-      return;
-    }
-    
-    for (const email of adminEmails) {
-      const existingAdmin = await UserModel.findOne({ email: email.toLowerCase().trim() });
-      
-      if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
-        const admin = new UserModel({
-          email: email.toLowerCase().trim(),
-          password: hashedPassword,
-          role: 'admin',
-          updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
-        });
-        
-        await admin.save();
-        console.log(`✅ Admin user created: ${email}`);
-      } else {
-        console.log(`ℹ️  Admin user already exists: ${email}`);
-      }
-    }
-  } catch (error) {
-    console.error('❌ Error initializing admin users:', error);
-  }
-};
+// Admin users are managed manually in the database
+// No automatic admin user creation
 
 // Clean up invalid session keys
 const cleanupSessionKeys = async () => {
@@ -132,9 +101,8 @@ const cleanupSessionKeys = async () => {
   }
 };
 
-// Initialize admin users after database connection
+// Clean up session keys after database connection
 setTimeout(async () => {
-  await initializeAdminUsers();
   await cleanupSessionKeys();
 }, 2000);
         //get all the jobdatabase data..
