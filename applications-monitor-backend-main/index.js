@@ -138,7 +138,7 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, dashboardCredentialsShared, resumeSent, coverLetterSent, portfolioMade, linkedinOptimization, gmailCredentials, amountPaid, modeOfPayment } = req.body;
+        const { email, name, jobDeadline, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, amountPaid, amountPaidDate, modeOfPayment } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -157,13 +157,20 @@ const createOrUpdateClient = async (req, res) => {
             planPrice: planPrices[planType] || 199,
             onboardingDate,
             whatsappGroupMade,
+            whatsappGroupMadeDate,
             dashboardCredentialsShared,
+            dashboardCredentialsSharedDate,
             resumeSent,
+            resumeSentDate,
             coverLetterSent,
+            coverLetterSentDate,
             portfolioMade,
+            portfolioMadeDate,
             linkedinOptimization,
+            linkedinOptimizationDate,
             gmailCredentials,
             amountPaid,
+            amountPaidDate,
             modeOfPayment,
             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
         };
