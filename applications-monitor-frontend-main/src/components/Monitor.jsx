@@ -362,11 +362,17 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
     onboardingDate: '',
     jobDeadline: '',
     whatsappGroupMade: false,
+    whatsappGroupMadeDate: '',
     dashboardCredentialsShared: false,
+    dashboardCredentialsSharedDate: '',
     resumeSent: false,
+    resumeSentDate: '',
     coverLetterSent: false,
+    coverLetterSentDate: '',
     portfolioMade: false,
-    linkedinOptimization: false
+    portfolioMadeDate: '',
+    linkedinOptimization: false,
+    linkedinOptimizationDate: ''
   });
 
   // Update form data when clientDetails change
@@ -380,11 +386,17 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
         onboardingDate: clientDetails.onboardingDate || '',
         jobDeadline: clientDetails.jobDeadline || '',
         whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        whatsappGroupMadeDate: clientDetails.whatsappGroupMadeDate || '',
         dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        dashboardCredentialsSharedDate: clientDetails.dashboardCredentialsSharedDate || '',
         resumeSent: clientDetails.resumeSent || false,
+        resumeSentDate: clientDetails.resumeSentDate || '',
         coverLetterSent: clientDetails.coverLetterSent || false,
+        coverLetterSentDate: clientDetails.coverLetterSentDate || '',
         portfolioMade: clientDetails.portfolioMade || false,
-        linkedinOptimization: clientDetails.linkedinOptimization || false
+        portfolioMadeDate: clientDetails.portfolioMadeDate || '',
+        linkedinOptimization: clientDetails.linkedinOptimization || false,
+        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || ''
       });
     }
   }, [clientDetails]);
@@ -439,11 +451,17 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
         onboardingDate: clientDetails.onboardingDate || '',
         jobDeadline: clientDetails.jobDeadline || '',
         whatsappGroupMade: clientDetails.whatsappGroupMade || false,
+        whatsappGroupMadeDate: clientDetails.whatsappGroupMadeDate || '',
         dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
+        dashboardCredentialsSharedDate: clientDetails.dashboardCredentialsSharedDate || '',
         resumeSent: clientDetails.resumeSent || false,
+        resumeSentDate: clientDetails.resumeSentDate || '',
         coverLetterSent: clientDetails.coverLetterSent || false,
+        coverLetterSentDate: clientDetails.coverLetterSentDate || '',
         portfolioMade: clientDetails.portfolioMade || false,
-        linkedinOptimization: clientDetails.linkedinOptimization || false
+        portfolioMadeDate: clientDetails.portfolioMadeDate || '',
+        linkedinOptimization: clientDetails.linkedinOptimization || false,
+        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || ''
       });
     }
     setIsEditing(false);
@@ -622,131 +640,239 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
       {/* Task Checklist Section */}
       <div className="mt-6 pt-4 border-t border-slate-200">
         <h4 className="text-sm font-semibold text-slate-700 mb-3">Task Checklist</h4>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="whatsappGroupMade"
-                checked={formData.whatsappGroupMade}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.whatsappGroupMade ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">WhatsApp Group</span>
+        <div className="space-y-4">
+          {/* WhatsApp Group */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="whatsappGroupMade"
+                  checked={formData.whatsappGroupMade}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.whatsappGroupMade ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">WhatsApp Group</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="whatsappGroupMadeDate"
+                  value={formData.whatsappGroupMadeDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.whatsappGroupMadeDate ? new Date(clientDetails.whatsappGroupMadeDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="dashboardCredentialsShared"
-                checked={formData.dashboardCredentialsShared}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.dashboardCredentialsShared ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">Dashboard Credentials</span>
+
+          {/* Dashboard Credentials */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="dashboardCredentialsShared"
+                  checked={formData.dashboardCredentialsShared}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.dashboardCredentialsShared ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">Dashboard Credentials</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="dashboardCredentialsSharedDate"
+                  value={formData.dashboardCredentialsSharedDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.dashboardCredentialsSharedDate ? new Date(clientDetails.dashboardCredentialsSharedDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="resumeSent"
-                checked={formData.resumeSent}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.resumeSent ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">Resume Sent</span>
+
+          {/* Resume Sent */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="resumeSent"
+                  checked={formData.resumeSent}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.resumeSent ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">Resume Sent</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="resumeSentDate"
+                  value={formData.resumeSentDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.resumeSentDate ? new Date(clientDetails.resumeSentDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="coverLetterSent"
-                checked={formData.coverLetterSent}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.coverLetterSent ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">Cover Letter</span>
+
+          {/* Cover Letter */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="coverLetterSent"
+                  checked={formData.coverLetterSent}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.coverLetterSent ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">Cover Letter</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="coverLetterSentDate"
+                  value={formData.coverLetterSentDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.coverLetterSentDate ? new Date(clientDetails.coverLetterSentDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="portfolioMade"
-                checked={formData.portfolioMade}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.portfolioMade ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">Portfolio Made</span>
+
+          {/* Portfolio Made */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="portfolioMade"
+                  checked={formData.portfolioMade}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.portfolioMade ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">Portfolio Made</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="portfolioMadeDate"
+                  value={formData.portfolioMadeDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.portfolioMadeDate ? new Date(clientDetails.portfolioMadeDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <input
-                type="checkbox"
-                name="linkedinOptimization"
-                checked={formData.linkedinOptimization}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-            ) : (
-              <div className="w-3 h-3 rounded-full flex items-center justify-center">
-                {clientDetails.linkedinOptimization ? (
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                ) : (
-                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                )}
-              </div>
-            )}
-            <span className="text-xs text-slate-600">LinkedIn Optimization</span>
+
+          {/* LinkedIn Optimization */}
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {isEditing ? (
+                <input
+                  type="checkbox"
+                  name="linkedinOptimization"
+                  checked={formData.linkedinOptimization}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+              ) : (
+                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                  {clientDetails.linkedinOptimization ? (
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                  ) : (
+                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  )}
+                </div>
+              )}
+              <span className="text-sm font-medium text-slate-700">LinkedIn Optimization</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="linkedinOptimizationDate"
+                  value={formData.linkedinOptimizationDate}
+                  onChange={handleInputChange}
+                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {clientDetails.linkedinOptimizationDate ? new Date(clientDetails.linkedinOptimizationDate).toLocaleDateString('en-GB') : 'Not set'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -771,7 +897,7 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 }
 
 // ---------------- Main Component ----------------
-export default function Monitor({ onClose }) {
+export default function Monitor({ onClose, userRole = 'admin' }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -914,6 +1040,7 @@ export default function Monitor({ onClose }) {
       <ClientDetails 
         clientEmail={clientDetailsEmail} 
         onClose={handleCloseClientDetails}
+        userRole={userRole}
       />
     );
   }
@@ -1015,35 +1142,7 @@ export default function Monitor({ onClose }) {
 
         {!loading && !err && selectedClient && !showClients && (
           <>
-            {/* Slim status bar */}
-            <div className="ml-8">
-            <StatusBar
-              counts={statusCounts}
-              dateAppliedCount={dateAppliedCount}
-              filterDate={filterDate}
-                onStatusClick={(status) => {
-                  // Toggle functionality: if same status is clicked, close panel
-                  if (selectedStatus === status && rightSidebarOpen) {
-                    setRightSidebarOpen(false);
-                    setSelectedStatus(null);
-                  } else {
-                    setSelectedStatus(status);
-                    setRightSidebarOpen(true);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Client Details Section */}
-            <div className="ml-8 mb-6">
-              <ClientDetailsSection 
-                clientEmail={selectedClient}
-                clientDetails={clientDetails[selectedClient]}
-                onClientUpdate={handleClientUpdate}
-              />
-            </div>
-
-            {/* Header Section */}
+            {/* Header Section - Job Applications Title */}
             <div className="mb-6">
               {/* Title and Personal Details Row */}
               <div className="flex items-center justify-between mb-6">
@@ -1070,35 +1169,63 @@ export default function Monitor({ onClose }) {
                   </svg>
                 </button>
               </div>
+            </div>
 
-              {/* Date Filter Row */}
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium text-slate-700">Filter by date:</label>
-                <input
-                  type="date"
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                {filterDate && (
-                  <>
-                  <button
-                    onClick={() => setFilterDate("")}
-                      className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    Clear
-                  </button>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
-                      <span className="text-sm font-medium text-blue-800">
-                        Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
-                      </span>
-                      <span className="text-sm font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded">
-                        {dateAppliedCount}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
+            {/* Status bar */}
+            <div className="ml-8 mb-6">
+            <StatusBar
+              counts={statusCounts}
+              dateAppliedCount={dateAppliedCount}
+              filterDate={filterDate}
+                onStatusClick={(status) => {
+                  // Toggle functionality: if same status is clicked, close panel
+                  if (selectedStatus === status && rightSidebarOpen) {
+                    setRightSidebarOpen(false);
+                    setSelectedStatus(null);
+                  } else {
+                    setSelectedStatus(status);
+                    setRightSidebarOpen(true);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Client Details Section */}
+            <div className="ml-8 mb-6">
+              <ClientDetailsSection 
+                clientEmail={selectedClient}
+                clientDetails={clientDetails[selectedClient]}
+                onClientUpdate={handleClientUpdate}
+              />
+            </div>
+
+            {/* Date Filter Row */}
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-slate-700">Filter by date:</label>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              {filterDate && (
+                <>
+                <button
+                  onClick={() => setFilterDate("")}
+                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Clear
+                </button>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                    <span className="text-sm font-medium text-blue-800">
+                      Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
+                    </span>
+                    <span className="text-sm font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded">
+                      {dateAppliedCount}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {!filterDate && (
@@ -1149,7 +1276,6 @@ export default function Monitor({ onClose }) {
           setSelectedJob(null);
         }}
       />
-      
       </div>
     </div>
   );
