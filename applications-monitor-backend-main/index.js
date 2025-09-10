@@ -14,12 +14,23 @@ import 'dotenv/config';
 
 // Environment Variables
 const PORT = process.env.PORT || 8086;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/applications-monitor';
-const JWT_SECRET = process.env.JWT_SECRET || 'flashfire_secret_key_2024';
+const MONGODB_URI = process.env.MONGODB_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate required environment variables
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is required');
+  process.exit(1);
+}
+
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET environment variable is required');
+  process.exit(1);
+}
 
 const app = express();
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN,
   credentials: true
 }));
 app.use(express.json());

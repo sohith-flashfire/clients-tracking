@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
+const API_BASE = import.meta.env.VITE_API_URL;
+
+// Validate required environment variables
+if (!API_BASE) {
+  console.error('❌ VITE_API_URL environment variable is required');
+}
 
 export default function Login({ onLogin }) {
   const [formData, setFormData] = useState({

@@ -1,7 +1,12 @@
 import React, { useMemo, useState, useEffect } from "react";
 import ClientDetails from "./ClientDetails";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
+const API_BASE = import.meta.env.VITE_API_URL;
+
+// Validate required environment variables
+if (!API_BASE) {
+  console.error('❌ VITE_API_URL environment variable is required');
+}
 
 // ---------------- API ----------------
 async function fetchAllJobs() {

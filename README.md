@@ -60,35 +60,49 @@ A comprehensive client tracking and management system with role-based authentica
    ```
 
 4. **Access the Application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8086
+   - Frontend: Configured via VITE_API_URL
+   - Backend API: Configured via PORT environment variable
+
+## Required Environment Variables
+
+⚠️ **IMPORTANT**: The following environment variables are **REQUIRED** for the application to work:
+
+### Backend Required Variables:
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - Secret key for JWT token signing
+- `ADMIN_EMAILS` - Comma-separated list of admin email addresses
+- `ADMIN_PASSWORD` - Password for admin users
+- `CORS_ORIGIN` - Frontend URL for CORS configuration
+
+### Frontend Required Variables:
+- `VITE_API_URL` - Backend API URL
 
 ## Environment Configuration
 
 ### Backend (.env)
 ```env
-# Database Configuration
-MONGODB_URI=mongodb://localhost:27017/applications-monitor
+# Database Configuration (REQUIRED)
+MONGODB_URI=your_mongodb_connection_string_here
 
 # Server Configuration
 PORT=8086
 NODE_ENV=development
 
-# JWT Configuration
+# JWT Configuration (REQUIRED)
 JWT_SECRET=your_super_secret_jwt_key_here
 
-# Admin Configuration
+# Admin Configuration (REQUIRED)
 ADMIN_EMAILS=admin1@example.com,admin2@example.com
 ADMIN_PASSWORD=your_admin_password_here
 
-# CORS Configuration
-CORS_ORIGIN=http://localhost:5173
+# CORS Configuration (REQUIRED)
+CORS_ORIGIN=your_frontend_url_here
 ```
 
 ### Frontend (.env)
 ```env
-# API Configuration
-VITE_API_URL=http://localhost:8086
+# API Configuration (REQUIRED)
+VITE_API_URL=your_backend_api_url_here
 
 # App Configuration
 VITE_APP_NAME=FlashFire Portal
