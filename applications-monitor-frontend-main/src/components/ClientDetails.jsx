@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
 
-const ClientDetails = ({ clientEmail, onClose }) => {
+const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
   const [client, setClient] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -15,16 +15,23 @@ const ClientDetails = ({ clientEmail, onClose }) => {
     planType: 'ignite',
     onboardingDate: '',
     whatsappGroupMade: false,
+    whatsappGroupMadeDate: '',
     dashboardCredentialsShared: false,
+    dashboardCredentialsSharedDate: '',
     resumeSent: false,
+    resumeSentDate: '',
     coverLetterSent: false,
+    coverLetterSentDate: '',
     portfolioMade: false,
+    portfolioMadeDate: '',
     linkedinOptimization: false,
+    linkedinOptimizationDate: '',
     gmailCredentials: {
       email: '',
       password: ''
     },
     amountPaid: 0,
+    amountPaidDate: '',
     modeOfPayment: 'paypal'
   });
 
@@ -62,16 +69,23 @@ const ClientDetails = ({ clientEmail, onClose }) => {
           planType: data.client.planType || 'ignite',
           onboardingDate: data.client.onboardingDate || '',
           whatsappGroupMade: data.client.whatsappGroupMade || false,
+          whatsappGroupMadeDate: data.client.whatsappGroupMadeDate || '',
           dashboardCredentialsShared: data.client.dashboardCredentialsShared || false,
+          dashboardCredentialsSharedDate: data.client.dashboardCredentialsSharedDate || '',
           resumeSent: data.client.resumeSent || false,
+          resumeSentDate: data.client.resumeSentDate || '',
           coverLetterSent: data.client.coverLetterSent || false,
+          coverLetterSentDate: data.client.coverLetterSentDate || '',
           portfolioMade: data.client.portfolioMade || false,
+          portfolioMadeDate: data.client.portfolioMadeDate || '',
           linkedinOptimization: data.client.linkedinOptimization || false,
+          linkedinOptimizationDate: data.client.linkedinOptimizationDate || '',
           gmailCredentials: {
             email: data.client.gmailCredentials?.email || '',
             password: data.client.gmailCredentials?.password || ''
           },
           amountPaid: data.client.amountPaid || 0,
+          amountPaidDate: data.client.amountPaidDate || '',
           modeOfPayment: data.client.modeOfPayment || 'paypal'
         });
       } else {
@@ -228,54 +242,77 @@ const ClientDetails = ({ clientEmail, onClose }) => {
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Amount Paid
-                    </label>
-                    {isEditing ? (
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-slate-500 sm:text-sm">$</span>
-                        </div>
-                        <input
-                          type="number"
-                          name="amountPaid"
-                          value={formData.amountPaid}
-                          onChange={handleInputChange}
-                          className="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
+                  {userRole === 'admin' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Amount Paid
+                        </label>
+                        {isEditing ? (
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-slate-500 sm:text-sm">$</span>
+                            </div>
+                            <input
+                              type="number"
+                              name="amountPaid"
+                              value={formData.amountPaid}
+                              onChange={handleInputChange}
+                              className="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                        ) : (
+                          <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
+                            ${client?.amountPaid || 0}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
-                        ${client?.amountPaid || 0}
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Payment Date
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            name="amountPaidDate"
+                            value={formData.amountPaidDate}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                          />
+                        ) : (
+                          <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700">
+                            {client?.amountPaidDate ? new Date(client.amountPaidDate).toLocaleDateString('en-GB') : 'Not set'}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Mode of Payment
-                    </label>
-                    {isEditing ? (
-                      <select
-                        name="modeOfPayment"
-                        value={formData.modeOfPayment}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                      >
-                        <option value="paypal">PayPal</option>
-                        <option value="wire_transfer">Wire Transfer</option>
-                        <option value="inr">INR</option>
-                      </select>
-                    ) : (
-                      <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700 capitalize">
-                        {client?.modeOfPayment?.replace('_', ' ') || 'Not set'}
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Mode of Payment
+                        </label>
+                        {isEditing ? (
+                          <select
+                            name="modeOfPayment"
+                            value={formData.modeOfPayment}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                          >
+                            <option value="paypal">PayPal</option>
+                            <option value="wire_transfer">Wire Transfer</option>
+                            <option value="inr">INR</option>
+                          </select>
+                        ) : (
+                          <div className="px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-700 capitalize">
+                            {client?.modeOfPayment?.replace('_', ' ') || 'Not set'}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
 
