@@ -640,10 +640,9 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
       {/* Task Checklist Section */}
       <div className="mt-6 pt-4 border-t border-slate-200">
         <h4 className="text-sm font-semibold text-slate-700 mb-3">Task Checklist</h4>
-        <div className="space-y-4">
-          {/* WhatsApp Group */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -653,36 +652,33 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.whatsappGroupMade ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">WhatsApp Group</span>
+              <span className="text-xs text-slate-600">WhatsApp Group</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="whatsappGroupMadeDate"
-                  value={formData.whatsappGroupMadeDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.whatsappGroupMadeDate ? new Date(clientDetails.whatsappGroupMadeDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="whatsappGroupMadeDate"
+                value={formData.whatsappGroupMadeDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.whatsappGroupMadeDate ? new Date(clientDetails.whatsappGroupMadeDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
-
-          {/* Dashboard Credentials */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -692,36 +688,33 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.dashboardCredentialsShared ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">Dashboard Credentials</span>
+              <span className="text-xs text-slate-600">Dashboard Credentials</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="dashboardCredentialsSharedDate"
-                  value={formData.dashboardCredentialsSharedDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.dashboardCredentialsSharedDate ? new Date(clientDetails.dashboardCredentialsSharedDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="dashboardCredentialsSharedDate"
+                value={formData.dashboardCredentialsSharedDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.dashboardCredentialsSharedDate ? new Date(clientDetails.dashboardCredentialsSharedDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
-
-          {/* Resume Sent */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -731,36 +724,33 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.resumeSent ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">Resume Sent</span>
+              <span className="text-xs text-slate-600">Resume Sent</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="resumeSentDate"
-                  value={formData.resumeSentDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.resumeSentDate ? new Date(clientDetails.resumeSentDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="resumeSentDate"
+                value={formData.resumeSentDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.resumeSentDate ? new Date(clientDetails.resumeSentDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
-
-          {/* Cover Letter */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -770,36 +760,33 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.coverLetterSent ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">Cover Letter</span>
+              <span className="text-xs text-slate-600">Cover Letter</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="coverLetterSentDate"
-                  value={formData.coverLetterSentDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.coverLetterSentDate ? new Date(clientDetails.coverLetterSentDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="coverLetterSentDate"
+                value={formData.coverLetterSentDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.coverLetterSentDate ? new Date(clientDetails.coverLetterSentDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
-
-          {/* Portfolio Made */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -809,36 +796,33 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.portfolioMade ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">Portfolio Made</span>
+              <span className="text-xs text-slate-600">Portfolio Made</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="portfolioMadeDate"
-                  value={formData.portfolioMadeDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.portfolioMadeDate ? new Date(clientDetails.portfolioMadeDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="portfolioMadeDate"
+                value={formData.portfolioMadeDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.portfolioMadeDate ? new Date(clientDetails.portfolioMadeDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
-
-          {/* LinkedIn Optimization */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-            <div className="flex items-center space-x-3">
+          
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
               {isEditing ? (
                 <input
                   type="checkbox"
@@ -848,31 +832,29 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
                   className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 />
               ) : (
-                <div className="w-4 h-4 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full flex items-center justify-center">
                   {clientDetails.linkedinOptimization ? (
-                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   ) : (
-                    <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
                   )}
                 </div>
               )}
-              <span className="text-sm font-medium text-slate-700">LinkedIn Optimization</span>
+              <span className="text-xs text-slate-600">LinkedIn Optimization</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="linkedinOptimizationDate"
-                  value={formData.linkedinOptimizationDate}
-                  onChange={handleInputChange}
-                  className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-xs text-slate-500">
-                  {clientDetails.linkedinOptimizationDate ? new Date(clientDetails.linkedinOptimizationDate).toLocaleDateString('en-GB') : 'Not set'}
-                </span>
-              )}
-            </div>
+            {isEditing ? (
+              <input
+                type="date"
+                name="linkedinOptimizationDate"
+                value={formData.linkedinOptimizationDate}
+                onChange={handleInputChange}
+                className="text-xs px-2 py-1 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <span className="text-xs text-slate-500 ml-5">
+                {clientDetails.linkedinOptimizationDate ? new Date(clientDetails.linkedinOptimizationDate).toLocaleDateString('en-GB') : 'Not set'}
+              </span>
+            )}
           </div>
         </div>
       </div>
