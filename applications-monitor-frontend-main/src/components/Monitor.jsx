@@ -352,7 +352,7 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
-function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
+function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, userRole = 'admin' }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -361,6 +361,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
     planType: '',
     onboardingDate: '',
     jobDeadline: '',
+    applicationStartDate: '',
     whatsappGroupMade: false,
     whatsappGroupMadeDate: '',
     dashboardCredentialsShared: false,
@@ -385,6 +386,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
         planType: clientDetails.planType || '',
         onboardingDate: clientDetails.onboardingDate || '',
         jobDeadline: clientDetails.jobDeadline || '',
+        applicationStartDate: clientDetails.applicationStartDate || '',
         whatsappGroupMade: clientDetails.whatsappGroupMade || false,
         whatsappGroupMadeDate: clientDetails.whatsappGroupMadeDate || '',
         dashboardCredentialsShared: clientDetails.dashboardCredentialsShared || false,
@@ -525,12 +527,18 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
-            >
-              Edit Details
-            </button>
+            userRole === 'admin' ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
+              >
+                Edit Details
+              </button>
+            ) : (
+              <span className="px-3 py-1.5 text-xs font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded-lg">
+                View Only
+              </span>
+            )
           )}
         </div>
       </div>
@@ -616,6 +624,22 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
           ) : (
             <p className="text-sm text-slate-900 mt-1">
               {formatDate(clientDetails.jobDeadline)}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Application Start Date</label>
+          {isEditing ? (
+            <input
+              type="date"
+              name="applicationStartDate"
+              value={formData.applicationStartDate}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {formatDate(clientDetails.applicationStartDate)}
             </p>
           )}
         </div>
@@ -858,6 +882,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate }) {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
@@ -1014,6 +1039,74 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
 
   const dateAppliedCount = dateFilteredJobs.length;
 
+  // Helper function to calculate working days (excluding Sundays)
+  const calculateWorkingDays = (startDate, endDate) => {
+    let workingDays = 0;
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      const dayOfWeek = currentDate.getDay();
+      
+      // Count only Monday (1) to Saturday (6), exclude Sunday (0)
+      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+        workingDays++;
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return workingDays;
+  };
+
+  // Calculate daily target metrics
+  const calculateDailyTarget = useMemo(() => {
+    if (!selectedClient || !filterDate) return null;
+    
+    const clientDetail = clientDetails[selectedClient];
+    if (!clientDetail || !clientDetail.applicationStartDate) return null;
+    
+    try {
+      // Parse dates
+      const startDate = new Date(clientDetail.applicationStartDate);
+      const endDate = new Date(filterDate);
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+      
+      // Calculate working days passed (excluding Sundays)
+      const workingDaysPassed = calculateWorkingDays(startDate, endDate);
+      
+      if (workingDaysPassed < 0) return null; // Future date
+      
+      // Daily target is 35 applications per day
+      const dailyTarget = 35;
+      const expectedApplications = workingDaysPassed * dailyTarget;
+      
+      // Count actual applications in the period
+      const actualApplications = jobs.filter(job => {
+        if (job.userID !== selectedClient) return false;
+        
+        // Check if job was applied in the period
+        const jobDate = safeDate(job);
+        if (!jobDate) return false;
+        
+        return jobDate >= startDate && jobDate <= endDate && 
+               isAppliedNow(job);
+      }).length;
+      
+      return {
+        daysPassed: workingDaysPassed,
+        expectedApplications,
+        actualApplications,
+        dailyTarget
+      };
+    } catch (error) {
+      console.error('Error calculating daily target:', error);
+      return null;
+    }
+  }, [selectedClient, filterDate, clientDetails, jobs]);
+
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
     if (!clientSearchTerm) return clients;
@@ -1155,7 +1248,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             <div className="mb-6">
               {/* Title and Personal Details Row */}
               <div className="flex items-center justify-between mb-6">
-                <div>
+                <div className="flex-1 text-center">
                   <h1 className="text-3xl font-bold text-slate-900">
                     Job Applications for <span className="text-blue-600">{selectedClient}</span>
                   </h1>
@@ -1205,6 +1298,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                 clientEmail={selectedClient}
                 clientDetails={clientDetails[selectedClient]}
                 onClientUpdate={handleClientUpdate}
+                userRole={userRole}
               />
             </div>
 
@@ -1233,6 +1327,15 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                       {dateAppliedCount}
                     </span>
                   </div>
+                  {calculateDailyTarget && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-sm font-medium text-green-800">
+                        Expected: {calculateDailyTarget.expectedApplications} | 
+                        Applied: {calculateDailyTarget.actualApplications} | 
+                        Working Days: {calculateDailyTarget.daysPassed}
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </div>
