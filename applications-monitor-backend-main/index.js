@@ -138,7 +138,7 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, amountPaid, amountPaidDate, modeOfPayment } = req.body;
+        const { email, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -151,6 +151,7 @@ const createOrUpdateClient = async (req, res) => {
             email: email.toLowerCase(),
             name,
             jobDeadline,
+            applicationStartDate,
             dashboardInternName,
             dashboardTeamLeadName,
             planType,
@@ -169,6 +170,8 @@ const createOrUpdateClient = async (req, res) => {
             linkedinOptimization,
             linkedinOptimizationDate,
             gmailCredentials,
+            dashboardCredentials,
+            linkedinCredentials,
             amountPaid,
             amountPaidDate,
             modeOfPayment,
@@ -501,6 +504,7 @@ const syncClientsFromJobs = async (req, res) => {
                 email: email.toLowerCase(),
                 name: email.split('@')[0], // Use email prefix as default name
                 jobDeadline: "",
+                applicationStartDate: "",
                 dashboardInternName: "",
                 dashboardTeamLeadName: "",
                 planType: "ignite",
@@ -520,6 +524,14 @@ const syncClientsFromJobs = async (req, res) => {
                 linkedinOptimizationDate: "",
                 gmailCredentials: {
                     email: "",
+                    password: ""
+                },
+                dashboardCredentials: {
+                    username: "",
+                    password: ""
+                },
+                linkedinCredentials: {
+                    username: "",
                     password: ""
                 },
                 amountPaid: 0,
