@@ -18,6 +18,11 @@ export const ClientSchema = new mongoose.Schema({
     required: false,
     default: ""
   },
+  applicationStartDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
   dashboardInternName: {
     type: String,
     required: false,
@@ -106,6 +111,30 @@ export const ClientSchema = new mongoose.Schema({
   },
   gmailCredentials: {
     email: {
+      type: String,
+      required: false,
+      default: ""
+    },
+    password: {
+      type: String,
+      required: false,
+      default: ""
+    }
+  },
+  dashboardCredentials: {
+    username: {
+      type: String,
+      required: false,
+      default: ""
+    },
+    password: {
+      type: String,
+      required: false,
+      default: ""
+    }
+  },
+  linkedinCredentials: {
+    username: {
       type: String,
       required: false,
       default: ""
