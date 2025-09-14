@@ -77,10 +77,10 @@ function App() {
                 <div className="flex items-center gap-3">
                   {/* Logo */}
                   <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
+                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4 2h12v4H8v4h6v4H8v8H4V2z"/>
+                      <path d="M16 2c2 2 4 6 2 10-1 2-3 3-5 3 2-2 3-5 1-7-1-1-2-2-1-3 1-1 2-2 3-3z"/>
+                      <path d="M18 6c1 1 2 3 1 5-0.5 1-1.5 1.5-2.5 1.5 1-1 1.5-2.5 0.5-3.5-0.5-0.5-1-1-0.5-1.5 0.5-0.5 1-1 1.5-1.5z"/>
                     </svg>
                   </div>
                   <div>
@@ -121,10 +121,10 @@ function App() {
             <div className="flex items-center gap-3">
               {/* Logo */}
               <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 2h12v4H8v4h6v4H8v8H4V2z"/>
+                  <path d="M16 2c2 2 4 6 2 10-1 2-3 3-5 3 2-2 3-5 1-7-1-1-2-2-1-3 1-1 2-2 3-3z"/>
+                  <path d="M18 6c1 1 2 3 1 5-0.5 1-1.5 1.5-2.5 1.5 1-1 1.5-2.5 0.5-3.5-0.5-0.5-1-1-0.5-1.5 0.5-0.5 1-1 1.5-1.5z"/>
                 </svg>
               </div>
               <div>
