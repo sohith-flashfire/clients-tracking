@@ -131,7 +131,7 @@ export default function Login({ onLogin }) {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">FlashFire Portal</h1>
           <p className="text-gray-600 mt-2">
-            {step === 1 ? 'Sign in to access the tracking portal' : 'Enter your session key'}
+            {step === 1 ? 'Sign in to access the Client tracking portal' : 'Enter your session key'}
           </p>
         </div>
 
