@@ -74,9 +74,19 @@ function App() {
           <div className="bg-white shadow-sm border-b">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center py-3">
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">Client Tracking Portal</h1>
-                  <p className="text-sm text-gray-600">Admin: {user.email}</p>
+                <div className="flex items-center gap-3">
+                  {/* Logo */}
+                  <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5"/>
+                      <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-semibold text-gray-900">Client Tracking Portal</h1>
+                    <p className="text-sm text-gray-600">Admin: {user.email}</p>
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -95,7 +105,7 @@ function App() {
               </div>
             </div>
           </div>
-          <Monitor />
+          <Monitor userRole={user?.role || 'team_lead'} />
         </div>
       );
     }
@@ -108,9 +118,19 @@ function App() {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900"> Client Tracking Portal</h1>
-              <p className="text-sm text-gray-600">Team Lead: {user.email}</p>
+            <div className="flex items-center gap-3">
+              {/* Logo */}
+              <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Client Tracking Portal</h1>
+                <p className="text-sm text-gray-600">Team Lead: {user.email}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
@@ -121,7 +141,7 @@ function App() {
           </div>
         </div>
       </div>
-      <Monitor />
+      <Monitor userRole={user?.role || 'team_lead'} />
     </div>
   );
 }
