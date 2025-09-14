@@ -474,10 +474,86 @@ app.post('/api/auth/cleanup-session-keys', verifyToken, verifyAdmin, cleanupSess
 app.post('/', getAllJobs);
 app.post('/api/jobs', createJob);
 
+// Auto-sync clients from jobdbs to dashboardtrackings
+const syncClientsFromJobs = async (req, res) => {
+    try {
+        // Get all unique userIDs from jobs
+        const jobs = await JobModel.find({}, 'userID');
+        const uniqueUserIDs = [...new Set(jobs.map(job => job.userID).filter(id => 
+            id && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id)
+        ))];
+
+        console.log(`Found ${uniqueUserIDs.length} unique valid userIDs in jobs`);
+
+        // Check which clients already exist in dashboardtrackings
+        const existingClients = await ClientModel.find({}, 'email');
+        const existingEmails = existingClients.map(client => client.email);
+        
+        // Find missing clients
+        const missingClients = uniqueUserIDs.filter(userID => !existingEmails.includes(userID));
+        
+        console.log(`Found ${missingClients.length} missing clients to create`);
+
+        // Create missing clients with default values
+        const createdClients = [];
+        for (const email of missingClients) {
+            const clientData = {
+                email: email.toLowerCase(),
+                name: email.split('@')[0], // Use email prefix as default name
+                jobDeadline: "",
+                dashboardInternName: "",
+                dashboardTeamLeadName: "",
+                planType: "ignite",
+                planPrice: 199,
+                onboardingDate: "",
+                whatsappGroupMade: false,
+                whatsappGroupMadeDate: "",
+                dashboardCredentialsShared: false,
+                dashboardCredentialsSharedDate: "",
+                resumeSent: false,
+                resumeSentDate: "",
+                coverLetterSent: false,
+                coverLetterSentDate: "",
+                portfolioMade: false,
+                portfolioMadeDate: "",
+                linkedinOptimization: false,
+                linkedinOptimizationDate: "",
+                gmailCredentials: {
+                    email: "",
+                    password: ""
+                },
+                amountPaid: 0,
+                amountPaidDate: "",
+                modeOfPayment: "paypal",
+                createdAt: new Date().toLocaleString('en-US', 'Asia/Kolkata'),
+                updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+            };
+
+            const client = new ClientModel(clientData);
+            await client.save();
+            createdClients.push(client);
+            console.log(`Created client profile for: ${email}`);
+        }
+
+        res.status(200).json({
+            message: `Successfully synced clients from jobs`,
+            totalJobsUsers: uniqueUserIDs.length,
+            existingClients: existingEmails.length,
+            createdClients: createdClients.length,
+            createdClientsList: createdClients.map(c => c.email)
+        });
+
+    } catch (error) {
+        console.error('Error syncing clients from jobs:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/:email', getClientByEmail);
 app.post('/api/clients', createOrUpdateClient);
+app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
 
