@@ -75,7 +75,7 @@ function App() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center py-3">
                 <div>
-                  <h1 className="text-lg font-semibold text-gray-900">Tracking Portal</h1>
+                  <h1 className="text-lg font-semibold text-gray-900">Client Tracking Portal</h1>
                   <p className="text-sm text-gray-600">Admin: {user.email}</p>
                 </div>
                 <div className="flex gap-3">
@@ -109,7 +109,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Tracking Portal</h1>
+              <h1 className="text-lg font-semibold text-gray-900"> Client Tracking Portal</h1>
               <p className="text-sm text-gray-600">Team Lead: {user.email}</p>
             </div>
             <button
