@@ -927,6 +927,19 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       try {
         setLoading(true);
         
+        // First, sync missing clients from jobs to dashboardtrackings
+        try {
+          const syncResponse = await fetch(`${API_BASE}/api/clients/sync-from-jobs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json();
+            // Sync completed successfully
+          }
+        } catch (syncError) {
+          console.warn('Client sync failed (non-critical):', syncError);
+        }
         
         const data = await fetchAllJobs();
         setJobs(data);
@@ -955,17 +968,31 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
     })();
   }, []);
 
-  // Left column: clients
+  // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
-    // Get all clients from the clientDetails state
-    return Object.keys(clientDetails);
-  }, [clientDetails]);
+    // Get all clients that have jobs from the jobs data
+    const clientsWithJobs = new Set();
+    jobs.forEach((j) => {
+      // Only add valid email addresses as clients
+      if (j.userID && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(j.userID)) {
+        clientsWithJobs.add(j.userID);
+      }
+    });
+    const clientsList = [...clientsWithJobs];
+    return clientsList;
+  }, [jobs]);
 
   // Removed auto-selection - user will manually select from client cards
 
   const clientJobs = useMemo(() => {
     if (!selectedClient) return [];
-    return jobs.filter((j) => j.userID === selectedClient);
+    const filteredJobs = jobs.filter((j) => {
+      // Only include jobs with valid userID and matching selected client
+      return j.userID === selectedClient && 
+             j.userID && 
+             /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(j.userID);
+    });
+    return filteredJobs;
   }, [jobs, selectedClient]);
 
   const statusCounts = useMemo(() => getStatusCounts(clientJobs), [clientJobs]);
