@@ -82,7 +82,7 @@ function getLastTimelineStatus(timeline = []) {
 function isAppliedNow(job) {
   const current = String(job.currentStatus || "").toLowerCase();
   const last = getLastTimelineStatus(job.timeline);
-  return current === "applied" && last === "applied";
+  return current.includes("applied") && last && last.includes("applied");
 }
 
 function sortByUpdatedDesc(a, b) {
@@ -99,6 +99,18 @@ function safeDate(job) {
 
 // Status mapping to standardize status names
 function mapStatusToStandard(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+  
+  // Handle statuses with "by user" or "by intern" suffixes
+  if (normalizedStatus.includes('applied')) return 'applied';
+  if (normalizedStatus.includes('saved')) return 'saved';
+  if (normalizedStatus.includes('interviewing')) return 'interviewing';
+  if (normalizedStatus.includes('rejected')) return 'rejected';
+  if (normalizedStatus.includes('deleted')) return 'removed';
+  if (normalizedStatus.includes('offer') || normalizedStatus.includes('hired')) return 'offers';
+  if (normalizedStatus.includes('on-hold')) return 'interviewing';
+  
+  // Fallback to exact mapping for other statuses
   const statusMap = {
     'offer': 'offers',
     'hired': 'offers', // Treat hired as offers
@@ -110,7 +122,6 @@ function mapStatusToStandard(status) {
     'rejected': 'rejected'
   };
   
-  const normalizedStatus = String(status || "").toLowerCase();
   return statusMap[normalizedStatus] || normalizedStatus;
 }
 
