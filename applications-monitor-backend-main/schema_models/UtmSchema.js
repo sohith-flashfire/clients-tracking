@@ -53,7 +53,7 @@ const SourceUTMSchema = new mongoose.Schema({
   unique_clicks: { type: Number, default: 0 },
   unique_ips: { type: [String], default: [] },
    conversions: { type: [ConversionSchema], default: [] },
-  conversions:[ConversionSchema]
+  // conversions:[ConversionSc]hema
 });
 
 /* ------------------ Campaign Schema ------------------ */
