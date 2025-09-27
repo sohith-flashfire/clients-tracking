@@ -506,6 +506,61 @@ const deleteUser = async (req, res) => {
   }
 };
 //campaign routes
+
+app.post("/api/track/utm-campaign-lead", async (req, res) => {
+  try {
+    const { clientName, clientEmail, clientPhone, utmSource } = req.body;
+
+    if (!utmSource || !clientEmail) {
+      return res.status(400).json({ error: "utmSource and clientEmail are required" });
+    }
+
+    // 🔍 Find campaign that has a matching utm_source
+    const campaign = await LinkCampaignUtm.findOne({
+      "utm_source.utm_source": utmSource
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ message: "No campaign found for this utmSource" });
+    }
+
+    // Get the specific UTM object inside the campaign
+    const utmEntry = campaign.utm_source.find(
+      (s) => s.utm_source === utmSource
+    );
+
+    if (!utmEntry) {
+      return res.status(404).json({ message: "UTM not found inside campaign" });
+    }
+
+    // Check if clientEmail already exists
+    const alreadyExists = utmEntry.conversions.some(
+      (c) => c.clientEmail.toLowerCase() === clientEmail.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      return res.status(200).json({ message: "Client already exists, not added again" });
+    }
+
+    // Add new conversion
+    utmEntry.conversions.push({
+      clientName,
+      clientEmail,
+      clientPhone: clientPhone || "Not Provided",
+      bookingDate: new Date()
+    });
+
+    await campaign.save();
+
+    return res.status(201).json({
+      message: "✅ Conversion added successfully",
+      conversion: { clientName, clientEmail, clientPhone }
+    });
+  } catch (error) {
+    console.error("❌ Error in /api/track/utm-campaign-lead:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 app.post("/api/campaign/create", CreateCampaign);
 
 app.post("/api/track", async (req, res) => {
@@ -628,8 +683,8 @@ app.get("/r/:code", async (req, res) => {
 // Admin report: list all links with counts
 app.get("/api/report", async (_req, res) => {
   try {
-    const baseUrl =
-      "https://flashfirejobs.com";
+    const baseUrl = "https://flashfirejobs.com";
+
     const campaigns = await LinkCampaignUtm.find({}, { __v: 0 })
       .sort({ createdAt: -1 })
       .lean();
@@ -656,11 +711,11 @@ app.get("/api/report", async (_req, res) => {
           utm_source: s.utm_source,
           total_clicks: s.total_clicks,
           unique_clicks: s.unique_clicks,
-          // You can generate frontend link per campaigner here
           link: `${baseUrl}?ref=${encode(
             campaign.campaign_name,
             s.utm_source
           )}`,
+          conversions: s.conversions || []   // ✅ include conversions here
         })),
       };
     });
@@ -671,6 +726,7 @@ app.get("/api/report", async (_req, res) => {
     res.status(500).json({ ok: false, error: "server_error" });
   }
 });
+
 
 
 // Optional: get report by campaign

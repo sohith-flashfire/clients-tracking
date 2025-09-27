@@ -4,12 +4,12 @@ export default function Report() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openCampaign, setOpenCampaign] = useState(null);
+  const [selectedConversions, setSelectedConversions] = useState(null); // ✅ new
   const API_BASE = import.meta.env.VITE_BASE;
 
-// Validate required environment variables
-if (!API_BASE) {
-  console.error('❌ VITE_API_URL environment variable is required');
-}
+  if (!API_BASE) {
+    console.error("❌ VITE_API_URL environment variable is required");
+  }
 
   useEffect(() => {
     fetch(`${API_BASE}/api/report`)
@@ -74,6 +74,7 @@ if (!API_BASE) {
                         <th className="p-2 border">Campaigner</th>
                         <th className="p-2 border">Unique Visitors</th>
                         <th className="p-2 border">Total Clicks</th>
+                        <th className="p-2 border">Conversions</th> {/* ✅ new */}
                         <th className="p-2 border">Link</th>
                       </tr>
                     </thead>
@@ -83,12 +84,14 @@ if (!API_BASE) {
                           <td className="p-2 border">{c.utm_source}</td>
                           <td className="p-2 border">{c.unique_clicks}</td>
                           <td className="p-2 border">{c.total_clicks}</td>
+                          <td
+                            className="p-2 border text-blue-600 underline cursor-pointer"
+                            onClick={() => setSelectedConversions(c.conversions || [])}
+                          >
+                            {c.conversions ? c.conversions.length : 0}
+                          </td>
                           <td className="p-2 border text-blue-600 underline">
-                            <a
-                              href={c.link}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
+                            <a href={c.link} target="_blank" rel="noreferrer">
                               {c.link}
                             </a>
                           </td>
@@ -100,6 +103,36 @@ if (!API_BASE) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ✅ Conversions Modal */}
+      {selectedConversions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Conversions</h2>
+            {selectedConversions.length === 0 ? (
+              <p>No conversions yet.</p>
+            ) : (
+              <ul className="space-y-2 max-h-60 overflow-y-auto">
+                {selectedConversions.map((conv, i) => (
+                  <li key={i} className="border-b pb-2">
+                    <p className="font-medium">{conv.clientName}</p>
+                    <p className="text-sm text-gray-600">{conv.clientEmail}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(conv.bookingDate).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => setSelectedConversions(null)}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>

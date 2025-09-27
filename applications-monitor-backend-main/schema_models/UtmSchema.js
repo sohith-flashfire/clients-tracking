@@ -38,6 +38,13 @@
 import mongoose from "mongoose";
 
 /* ------------------ SourceUTM Schema ------------------ */
+const ConversionSchema = new mongoose.Schema({
+  clientName: { type: String, required: true },
+  clientEmail: { type: String, required: true },
+  clientPhone: { type: String, default: "Not Provided" },
+  bookingDate: { type: Date, default: Date.now }
+});
+
 const SourceUTMSchema = new mongoose.Schema({
   utm_source: { type: String, required: true },   // campaigner
   utm_campaign: { type: String, required: true }, // campaign
@@ -45,7 +52,8 @@ const SourceUTMSchema = new mongoose.Schema({
   total_clicks: { type: Number, default: 0 },
   unique_clicks: { type: Number, default: 0 },
   unique_ips: { type: [String], default: [] },
-  createdAt: { type: Date, default: Date.now },
+   conversions: { type: [ConversionSchema], default: [] },
+  conversions:[ConversionSchema]
 });
 
 /* ------------------ Campaign Schema ------------------ */
