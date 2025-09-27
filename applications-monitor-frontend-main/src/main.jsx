@@ -34,10 +34,11 @@ const router = createBrowserRouter([
     path: '/',
     element: <App />,
     children: [
-      // {
-      //   path: '/portal',
-      //   element: <Monitor />
-      // },
+      {
+        path: '/',
+        element: <Monitor />,
+        index : true
+      },
       // {
       //   path: 'admin',
       //   element: <AdminLayout />,
