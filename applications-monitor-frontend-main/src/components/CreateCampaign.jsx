@@ -45,6 +45,9 @@ if (!API_BASE) {
             className="w-full border rounded p-2 mt-1"
             required
           />
+          <h1>** try to keep the campaign name & campaigners name unique..</h1>
+          <h1>use current date and time for unique campaign name</h1>
+          <h1>try avoiding spaces between ..it only increases the hashcode length</h1>
         </div>
         <div>
           <label className="block font-medium">Campaigners (comma-separated)</label>

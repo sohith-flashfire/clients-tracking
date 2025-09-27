@@ -51,6 +51,10 @@ const router = createBrowserRouter([
         element: <CreateCampaign />
       },
       {
+        path:'/email-campaigns/report',
+        element : <Report />
+      }
+      {
         path : '/monitor-clients',
         element: <Monitor />
       },
