@@ -5,12 +5,18 @@ export default function CreateCampaign() {
   const [campaigners, setCampaigners] = useState("");
   const [links, setLinks] = useState('');
   const [loading, setLoading] = useState(false);
+  const API_BASE = import.meta.env.VITE_BASE;
+
+// Validate required environment variables
+if (!API_BASE) {
+  console.error('❌ VITE_API_URL environment variable is required');
+}
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch(`https://utm-track-backend.onrender.com/api/campaign/create`, {
+      const res = await fetch(`${API_BASE}/api/campaign/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

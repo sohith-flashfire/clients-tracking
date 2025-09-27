@@ -4,9 +4,15 @@ export default function Report() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openCampaign, setOpenCampaign] = useState(null);
+  const API_BASE = import.meta.env.VITE_BASE;
+
+// Validate required environment variables
+if (!API_BASE) {
+  console.error('❌ VITE_API_URL environment variable is required');
+}
 
   useEffect(() => {
-    fetch(`https://utm-track-backend.onrender.com/api/report`)
+    fetch(`${API_BASE}/api/report`)
       .then((res) => res.json())
       .then((data) => {
         setRows(data.rows || []);

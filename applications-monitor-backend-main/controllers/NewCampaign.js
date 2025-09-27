@@ -220,7 +220,7 @@ export default async function createCampaign(req, res) {
       await campaign.save();
 
       const link = `${
-        process.env.FRONTEND_URL || "https://flashfire-frontend-hoisted.vercel.app"
+        process.env.FRONTEND_URL || "https://flashfirejobs.com"
       }?ref=${code}`;
 
       return res.json({
@@ -246,7 +246,7 @@ export default async function createCampaign(req, res) {
     await campaign.save();
 
     const link = `${
-      process.env.FRONTEND_URL || "https://flashfire-frontend-hoisted.vercel.app"
+      process.env.FRONTEND_URL || "https://flashfirejobs.com"
     }?ref=${code}`;
 
     return res.json({
