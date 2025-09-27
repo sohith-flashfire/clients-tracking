@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import ClientDetails from "./ClientDetails";
+import {Link, useNavigate} from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_BASE;
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -931,7 +932,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientDetails, setClientDetails] = useState({});
-
+  // const navigate = useNavigate();
   // In-memory caches (TTL-based) for jobs and clients
   const cacheRef = useRef({
     jobs: { data: null, ts: 0 },
@@ -1210,13 +1211,21 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
       {/* Left: Clients Button - Sliding Panel */}
       <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-blue-50`}>
-        <div className="w-64 p-3">
+        <div className="w-64 p-3 flex flex-col gap-3">
           <button
             onClick={() => setShowClients(true)}
             className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             Clients
           </button>
+          <Link to={'/email-campaigns'}>
+          <button
+            // onClick={() => navigate('/email-campaigns')}
+            className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Manage/ Monitor Campaigns
+          </button>
+          </Link>
         </div>
       </div>
 
@@ -1256,7 +1265,14 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
 
         {!loading && !err && showClients && (
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Select a Client</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Select a Client</h2>
+              <Link to={'/clients/new'} className="mb-4 inline-block">
+              <button className="border p-2 m-2 font-mono bg-blue-400 rounded-2xl hover:text-white hover:bg-blue-700">+ New Client</button>
+              </Link>
+              
+            </div>
+            
             
             {/* Search Bar */}
             <div className="mb-6">

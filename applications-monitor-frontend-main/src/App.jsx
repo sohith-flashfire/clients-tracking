@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import Monitor from './components/Monitor';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(()=>{localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null });
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('portal'); // 'portal' or 'admin'
-
+  const location = useLocation();
   useEffect(() => {
     // Check if user is already logged in
     const savedUser = localStorage.getItem('user');
@@ -26,7 +27,7 @@ function App() {
     
     setLoading(false);
   }, []);
-
+console.log(user)
   const handleLogin = (userData) => {
     setUser(userData);
     // Set default view based on user role
@@ -89,12 +90,11 @@ function App() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    onClick={handleGoToAdmin}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    Admin Dashboard
-                  </button>
+                  <Link to={location.pathname === "/admin-dashboard" ? "/monitor-clients" : "/admin-dashboard"}>
+      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+        {location.pathname === "/admin-dashboard" ? "Monitor Clients" : "Admin Dashboard"}
+      </button>
+    </Link>
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
@@ -105,7 +105,8 @@ function App() {
               </div>
             </div>
           </div>
-          <Monitor userRole={user?.role || 'team_lead'} />
+          {/* <Monitor userRole={user?.role || 'team_lead'} /> */}
+           <Outlet />
         </div>
       );
     }
@@ -141,9 +142,64 @@ function App() {
           </div>
         </div>
       </div>
-      <Monitor userRole={user?.role || 'team_lead'} />
+      {/* <Monitor userRole={user?.role || 'team_lead'} /> */}
+      <Outlet />
     </div>
   );
 }
 
 export default App;
+
+// import React, { useState, useEffect } from 'react';
+// import Login from './components/Login';
+// import {AdminLayout, PortalLayout} from './components/Navbar';
+// import Monitor from './components/Monitor';
+// import { Outlet, Navigate } from 'react-router-dom';
+
+// function App() {
+//   const [user, setUser] = useState(null);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     const savedUser = localStorage.getItem('user');
+//     const savedToken = localStorage.getItem('authToken');
+
+//     if (savedUser && savedToken) {
+//       try {
+//         setUser(JSON.parse(savedUser));
+//       } catch (err) {
+//         localStorage.removeItem('user');
+//         localStorage.removeItem('authToken');
+//       }
+//     }
+//     setLoading(false);
+//   }, []);
+
+//   const handleLogin = (userData) => {
+//     setUser(userData);
+//     localStorage.setItem('user', JSON.stringify(userData));
+//   };
+
+//   const handleLogout = () => {
+//     setUser(null);
+//     localStorage.removeItem('user');
+//     localStorage.removeItem('authToken');
+//   };
+
+//   if (loading) {
+//     return <div>Loading...</div>;
+//   }
+
+//   if (!user) {
+//     return <Login onLogin={handleLogin} />;
+//   }
+
+//   // Role-based routing
+//   if (user.role === 'admin') {
+//     // return <AdminLayout user={user} onLogout={handleLogout} />;
+//     return <Monitor userRole="admin" onClose={onClose} />;
+//   }
+//   return <PortalLayout user={user} onLogout={handleLogout} />;
+// }
+
+// export default App;
