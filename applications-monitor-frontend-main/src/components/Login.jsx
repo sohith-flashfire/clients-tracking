@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_BASE;
 
 // Validate required environment variables
 if (!API_BASE) {

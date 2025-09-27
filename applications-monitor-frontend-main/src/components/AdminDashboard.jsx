@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_BASE;
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -163,21 +164,21 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Welcome, {user.email}</p>
+              <p className="text-gray-600">Welcome, {user?.email}</p>
             </div>
             <div className="flex gap-3">
-              <button
+              {/* <button
                 onClick={onGoToPortal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Go to Client Tracking Portal
-              </button>
-              <button
+              </button> */}
+              {/* <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Logout
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -190,6 +191,27 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
             <p className="text-red-600">{error}</p>
           </div>
         )}
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Manage E-Mail Campaigns</h2>
+             <Link to="/email-campaigns/report">
+            <button
+              // onClick={() => setShowAddUser(!showAddUser)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Campaign Reports
+            </button>
+            </Link>
+            <Link to="/email-campaigns">
+            <button
+              // onClick={() => setShowAddUser(!showAddUser)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {/* {showAddUser ? 'Cancel' : 'Add Team Lead'} */}Manage E-mail Campaigns
+            </button>
+            </Link>
+          </div>
+        </div>
 
         {/* Add User Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
@@ -202,6 +224,7 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
               {showAddUser ? 'Cancel' : 'Add Team Lead'}
             </button>
           </div>
+          
 
           {showAddUser && (
             <form onSubmit={createUser} className="bg-gray-50 rounded-lg p-4">
