@@ -45,7 +45,8 @@ const allowedOrigins = [
   "https://www.flashfirejobs.com",
   "https://flashfire-frontend-hoisted.vercel.app/",
   "https://utm-track-frontend.vercel.app",
-  'https://dashboardtracking.vercel.app'
+  'https://dashboardtracking.vercel.app',
+  "https://clients-tracking.vercel.app"
 ];
 
 app.use(
