@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Layout from './Layout';
 
-const API_BASE = import.meta.env.VITE_BASE;
+const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -157,7 +158,7 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Layout>
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -215,6 +216,7 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
         </div>
 
         {/* Add User Section */}
+
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
@@ -384,6 +386,6 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
