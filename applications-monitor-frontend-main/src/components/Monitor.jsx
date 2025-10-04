@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import ClientDetails from "./ClientDetails";
 import {Link, useNavigate} from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_BASE;
+const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -1209,9 +1209,9 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       <div className="absolute top-4 right-4 z-30 flex gap-2" />
       
       <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
-      {/* Left: Clients Button - Sliding Panel */}
-      <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-blue-50`}>
-        <div className="w-64 p-3 flex flex-col gap-3">
+      {/* Left: Fixed Navigation Sidebar */}
+      <div className="w-64 border-r border-slate-200 bg-blue-50 flex-shrink-0">
+        <div className="p-3 flex flex-col gap-3">
           <button
             onClick={() => setShowClients(true)}
             className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -1226,32 +1226,16 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             Manage/ Monitor Campaigns
           </button>
           </Link>
+          <Link to={'/manager-dashboard'}>
+          <button
+            className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            Manager Dashboard
+          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Toggle Button */}
-      <button
-        onClick={() => {
-          if (!leftPanelOpen) {
-            // Opening panel - show client selection
-            setLeftPanelOpen(true);
-            setShowClients(true);
-          } else {
-            // Closing panel
-            setLeftPanelOpen(false);
-          }
-        }}
-        className={`absolute top-4 ${leftPanelOpen ? 'left-60' : 'left-4'} z-20 w-8 h-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all duration-300 flex items-center justify-center shadow-lg border-2 border-white`}
-      >
-        <svg 
-          className={`w-4 h-4 transition-transform duration-300 ${leftPanelOpen ? 'rotate-180' : ''}`} 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
 
       {/* Middle: Content Area */}
       <div className="flex-1 overflow-auto border-r border-slate-200 p-4 bg-slate-50">
