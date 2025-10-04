@@ -13,11 +13,6 @@ export default function Layout({ children }) {
                 Clients
               </button>
             </Link>
-            <Link to="/email-campaigns">
-              <button className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                Manage/ Monitor Campaigns
-              </button>
-            </Link>
             <Link to="/manager-dashboard">
               <button className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
                 Manager Dashboard
