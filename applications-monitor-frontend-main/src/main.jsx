@@ -29,6 +29,7 @@ import RegisterClient from './components/RegisterClient';
 import CreateCampaign from './components/CreateCampaign.jsx';
 import Report from './components/Report.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
+import ManagerDashboard from './components/ManagerDashboard.jsx';
 
 const router = createBrowserRouter([
   {
@@ -63,6 +64,10 @@ const router = createBrowserRouter([
       {
         path : '/admin-dashboard',
         element: <AdminDashboard />
+      },
+      {
+        path : '/manager-dashboard',
+        element: <ManagerDashboard />
       }
     ]
   }
