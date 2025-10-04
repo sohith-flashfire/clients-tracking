@@ -4,13 +4,23 @@ import { JobModel } from './JobModel.js';
 import { ClientModel } from './ClientModel.js';
 import { UserModel } from './UserModel.js';
 import { SessionKeyModel } from './SessionKeyModel.js';
+import { ManagerModel } from './ManagerModel.js';
 import cors from 'cors'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import CreateCampaign from './controllers/NewCampaign.js';
 import { decode, encode} from './utils/CodeExaminer.js';
-import { LinkCampaignUtm, Click } from './schema_models/UtmSchema.js'
+import { LinkCampaignUtm, Click } from './schema_models/UtmSchema.js';
+import { 
+  getAllManagers, 
+  getManagerById, 
+  createManager, 
+  updateManager, 
+  deleteManager, 
+  uploadProfilePhoto 
+} from './controllers/ManagerController.js';
+import { upload } from './utils/cloudinary.js';
 
 
 
@@ -19,6 +29,9 @@ import { LinkCampaignUtm, Click } from './schema_models/UtmSchema.js'
 const PORT = process.env.PORT || 8086;
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 // Validate required environment variables
 if (!MONGODB_URI) {
@@ -28,6 +41,11 @@ if (!MONGODB_URI) {
 
 if (!JWT_SECRET) {
   console.error('❌ JWT_SECRET environment variable is required');
+  process.exit(1);
+}
+
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+  console.error('❌ Cloudinary environment variables are required');
   process.exit(1);
 }
 
@@ -862,6 +880,14 @@ app.get('/api/clients', getAllClients);
 app.get('/api/clients/:email', getClientByEmail);
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
+
+// Manager routes
+app.get('/api/managers', verifyToken, getAllManagers);
+app.get('/api/managers/:id', verifyToken, getManagerById);
+app.post('/api/managers', verifyToken, verifyAdmin, upload.single('profilePhoto'), createManager);
+app.put('/api/managers/:id', verifyToken, verifyAdmin, upload.single('profilePhoto'), updateManager);
+app.delete('/api/managers/:id', verifyToken, verifyAdmin, deleteManager);
+app.post('/api/managers/:id/upload-photo', verifyToken, verifyAdmin, upload.single('profilePhoto'), uploadProfilePhoto);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
 
