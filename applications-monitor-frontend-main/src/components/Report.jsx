@@ -8,7 +8,7 @@ export default function Report() {
   const API_BASE = import.meta.env.VITE_BASE;
 
   if (!API_BASE) {
-    console.error("❌ VITE_API_URL environment variable is required");
+    console.error("❌ VITE_BASE environment variable is required");
   }
 
   useEffect(() => {

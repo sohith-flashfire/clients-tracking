@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8086";
+const API_BASE = import.meta.env.VITE_BASE || "http://localhost:5000";
 
 const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
   const [client, setClient] = useState(null);

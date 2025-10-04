@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
 // Validate required environment variables
 if (!API_BASE) {
-  console.error('❌ VITE_API_URL environment variable is required');
+  console.error('❌ VITE_BASE environment variable is required');
 }
 
 export default function AdminDashboard({ user, onLogout, onGoToPortal }) {

@@ -9,7 +9,7 @@ export default function CreateCampaign() {
 
 // Validate required environment variables
 if (!API_BASE) {
-  console.error('❌ VITE_API_URL environment variable is required');
+  console.error('❌ VITE_BASE environment variable is required');
 }
 
   const handleSubmit = async (e) => {
