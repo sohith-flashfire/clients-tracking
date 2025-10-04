@@ -340,11 +340,12 @@ function ClientCard({ client, clientDetails, onSelect }) {
   const details = clientDetails[client];
   const displayName = details?.name || client.split('@')[0];
   const initials = displayName.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || client.charAt(0).toUpperCase();
+  const status = details?.status || 'active';
   
   return (
     <button
       onClick={() => onSelect(client)}
-      className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left"
+      className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left relative"
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -360,6 +361,10 @@ function ClientCard({ client, clientDetails, onSelect }) {
             {client}
           </div>
         </div>
+        {/* Status indicator */}
+        <div className={`w-3 h-3 rounded-full ${
+          status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+        }`} title={`Status: ${status}`}></div>
       </div>
     </button>
   );
@@ -425,7 +430,8 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
     portfolioMade: false,
     portfolioMadeDate: '',
     linkedinOptimization: false,
-    linkedinOptimizationDate: ''
+    linkedinOptimizationDate: '',
+    status: 'active'
   });
 
   // Update form data when clientDetails change
@@ -450,7 +456,8 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMade: clientDetails.portfolioMade || false,
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
-        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || ''
+        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
+        status: clientDetails.status || 'active'
       });
     }
   }, [clientDetails]);
@@ -692,6 +699,26 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
           ) : (
             <p className="text-sm text-slate-900 mt-1">
               {formatDate(clientDetails.applicationStartDate)}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</label>
+          {isEditing ? (
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          ) : (
+            <p className={`text-sm mt-1 font-medium ${
+              clientDetails.status === 'active' ? 'text-green-600' : 'text-gray-500'
+            }`}>
+              {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
             </p>
           )}
         </div>
