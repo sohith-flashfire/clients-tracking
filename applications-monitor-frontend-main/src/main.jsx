@@ -26,8 +26,6 @@ import { AdminLayout, PortalLayout } from './components/Navbar';
 import Monitor from './components/Monitor';
 import ReactDOM from 'react-dom/client';
 import RegisterClient from './components/RegisterClient';
-import CreateCampaign from './components/CreateCampaign.jsx';
-import Report from './components/Report.jsx';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import ManagerDashboard from './components/ManagerDashboard.jsx';
 
@@ -48,14 +46,6 @@ const router = createBrowserRouter([
       {
         path: '/clients/new',
         element : <RegisterClient />
-      },
-      {
-        path: '/email-campaigns',
-        element: <CreateCampaign />
-      },
-      {
-        path:'/email-campaigns/report',
-        element : <Report />
       },
       {
         path : '/monitor-clients',
