@@ -1645,7 +1645,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                     Track job applications and manage client assignments
                   </p>
                 </div>
-                <button
+                {/* <button
                   onClick={() => {
                     setShowOperationDetails(true);
                     setOperationDetailsEmail(selectedOperation.email);
@@ -1661,7 +1661,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                   <svg className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </button> */}
               </div>
             </div>
 
