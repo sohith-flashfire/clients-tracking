@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Layout from './Layout';
 
 const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
@@ -158,7 +157,7 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
   };
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -386,6 +385,6 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
           )}
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }
