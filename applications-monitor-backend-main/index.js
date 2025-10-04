@@ -1127,4 +1127,3 @@ app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
-
