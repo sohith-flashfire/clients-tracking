@@ -1105,10 +1105,10 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           const month = targetDate.getMonth() + 1;
           const day = targetDate.getDate();
           const year = targetDate.getFullYear();
-          const dateString = `${month}/${day}/${year}`;
+          const dateString = `${day}/${month}/${year}`;
           
           jobs = jobs.filter(job => {
-            return job.dateAdded && job.dateAdded.includes(dateString);
+            return job.updatedAt && job.updatedAt.includes(dateString);
           });
         }
         
@@ -1812,6 +1812,17 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                 onChange={(e) => setFilterDate(e.target.value)}
                 className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+              {/* Applied Today Count */}
+              {filterDate && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm font-medium text-blue-800">
+                    Applied on {new Date(filterDate).toLocaleDateString('en-GB')}:
+                  </span>
+                  <span className="text-sm font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded">
+                    {dateAppliedCount}
+                  </span>
+                </div>
+              )}
               {filterDate && (
                 <>
                 <button

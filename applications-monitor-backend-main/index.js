@@ -939,15 +939,18 @@ const getJobsByOperatorEmail = async (req, res) => {
         let query = { operatorEmail: email.toLowerCase() };
         
         if (date) {
-            // Convert date from "2025-10-04" to "10/4/2025" format to match DB
+            // Convert date from "2025-10-04" to match DB format
+            // DB format appears to be "4/10/2025" (day/month/year)
             const targetDate = new Date(date);
             const month = targetDate.getMonth() + 1;
             const day = targetDate.getDate();
             const year = targetDate.getFullYear();
-            const dateString = `${month}/${day}/${year}`;
             
-            // Search for date string in the dateAdded field
-            query.dateAdded = {
+            // Create the format that matches the DB data: "4/10/2025"
+            const dateString = `${day}/${month}/${year}`;
+            
+            // Search for this date format in the updatedAt field
+            query.updatedAt = {
                 $regex: dateString,
                 $options: 'i'
             };
