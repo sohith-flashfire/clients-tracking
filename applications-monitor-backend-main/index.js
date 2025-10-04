@@ -203,7 +203,7 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment } = req.body;
+        const { email, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -240,6 +240,7 @@ const createOrUpdateClient = async (req, res) => {
             amountPaid,
             amountPaidDate,
             modeOfPayment,
+            status,
             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
         };
 
@@ -854,6 +855,7 @@ const syncClientsFromJobs = async (req, res) => {
                 amountPaid: 0,
                 amountPaidDate: "",
                 modeOfPayment: "paypal",
+                status: "active",
                 createdAt: new Date().toLocaleString('en-US', 'Asia/Kolkata'),
                 updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
             };
