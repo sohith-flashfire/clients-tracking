@@ -949,8 +949,8 @@ const getJobsByOperatorEmail = async (req, res) => {
             // Create the format that matches the DB data: "4/10/2025"
             const dateString = `${day}/${month}/${year}`;
             
-            // Search for this date format in the updatedAt field
-            query.updatedAt = {
+            // Search for this date format in the appliedDate field
+            query.appliedDate = {
                 $regex: dateString,
                 $options: 'i'
             };

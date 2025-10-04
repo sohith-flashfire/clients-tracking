@@ -96,7 +96,7 @@ function sortByUpdatedDesc(a, b) {
 }
 
 function safeDate(job) {
-  return parseFlexibleDate(job.updatedAt || job.dateAdded);
+  return parseFlexibleDate(job.appliedDate || job.updatedAt || job.dateAdded);
 }
 
 // Status mapping to standardize status names
@@ -1108,7 +1108,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           const dateString = `${day}/${month}/${year}`;
           
           jobs = jobs.filter(job => {
-            return job.updatedAt && job.updatedAt.includes(dateString);
+            return job.appliedDate && job.appliedDate.includes(dateString);
           });
         }
         

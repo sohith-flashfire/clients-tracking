@@ -72,6 +72,11 @@ export const JobSchema = new mongoose.Schema({
     type: String,
     required: false,
     default: 'user@flashfirehq'
+  }  ,
+  appliedDate: {
+    type: String,
+    required: false,
+    default: null
   },
 });
 
