@@ -161,6 +161,12 @@ export const ClientSchema = new mongoose.Schema({
     required: false,
     default: "paypal"
   },
+  status: {
+    type: String,
+    enum: ["active", "inactive"],
+    required: false,
+    default: "active"
+  },
   createdAt: {
     type: String,
     default: () => new Date().toLocaleString('en-US', 'Asia/Kolkata'),
