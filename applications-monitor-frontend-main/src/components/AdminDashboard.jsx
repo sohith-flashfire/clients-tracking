@@ -192,6 +192,28 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
           </div>
         )}
 
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Manage E-Mail Campaigns</h2>
+             <Link to="/email-campaigns/report">
+            <button
+              // onClick={() => setShowAddUser(!showAddUser)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Campaign Reports
+            </button>
+            </Link>
+            <Link to="/email-campaigns">
+            <button
+              // onClick={() => setShowAddUser(!showAddUser)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {/* {showAddUser ? 'Cancel' : 'Add Team Lead'} */}Manage E-mail Campaigns
+            </button>
+            </Link>
+          </div>
+        </div>
+
         {/* Add User Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
           <div className="flex justify-between items-center mb-4">

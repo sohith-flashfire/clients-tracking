@@ -1218,6 +1218,14 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Clients
           </button>
+          <Link to={'/email-campaigns'}>
+          <button
+            // onClick={() => navigate('/email-campaigns')}
+            className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Manage/ Monitor Campaigns
+          </button>
+          </Link>
         </div>
       </div>
 
