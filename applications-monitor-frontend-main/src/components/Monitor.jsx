@@ -3,7 +3,7 @@ import ClientDetails from "./ClientDetails";
 import OperationsDetails from "./OperationsDetails";
 import {Link, useNavigate} from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_BASE || "http://localhost:10000";
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -1055,7 +1055,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BASE || 'http://localhost:5000'}/api/clients/${encodeURIComponent(email)}`);
+      const response = await fetch(`${import.meta.env.VITE_BASE || 'http://localhost:10000'}/api/clients/${encodeURIComponent(email)}`);
       if (response.ok) {
         const data = await response.json();
         return data.client;
@@ -1469,14 +1469,6 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Operations Team
           </button>
-          <Link to={'/email-campaigns'}>
-          <button
-            // onClick={() => navigate('/email-campaigns')}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            Manage/ Monitor Campaigns
-          </button>
-          </Link>
           <Link to={'/manager-dashboard'}>
           <button
             className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
