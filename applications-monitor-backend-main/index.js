@@ -4,7 +4,11 @@ import { JobModel } from './JobModel.js';
 import { ClientModel } from './ClientModel.js';
 import { UserModel } from './UserModel.js';
 import { SessionKeyModel } from './SessionKeyModel.js';
+<<<<<<< Updated upstream
 import { ManagerModel } from './ManagerModel.js';
+=======
+import OperationsModel from './OperationsModel.js';
+>>>>>>> Stashed changes
 import cors from 'cors'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -875,12 +879,117 @@ const syncClientsFromJobs = async (req, res) => {
     }
 };
 
+// Operations endpoints
+const getAllOperations = async (req, res) => {
+    try {
+        const operations = await OperationsModel.find().lean();
+        res.status(200).json({operations});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
+const getOperationsByEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() }).lean();
+        if (!operation) {
+            return res.status(404).json({error: 'Operation user not found'});
+        }
+        res.status(200).json({operation});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
+const createOrUpdateOperation = async (req, res) => {
+    try {
+        const { email, name, password, role, managedUsers } = req.body;
+        
+        const operationData = {
+            email: email.toLowerCase(),
+            name,
+            password: password ? await bcrypt.hash(password, 10) : undefined,
+            role,
+            managedUsers,
+            updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+        };
+
+        // Remove undefined values
+        Object.keys(operationData).forEach(key => {
+            if (operationData[key] === undefined) {
+                delete operationData[key];
+            }
+        });
+
+        const operation = await OperationsModel.findOneAndUpdate(
+            { email: email.toLowerCase() },
+            operationData,
+            { upsert: true, new: true, runValidators: true }
+        );
+        
+        res.status(200).json({operation});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
+const getJobsByOperatorEmail = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const { date } = req.query;
+        
+        let query = { operatorEmail: email.toLowerCase() };
+        
+        if (date) {
+            // Convert date from "2025-10-04" to "10/4/2025" format to match DB
+            const targetDate = new Date(date);
+            const month = targetDate.getMonth() + 1;
+            const day = targetDate.getDate();
+            const year = targetDate.getFullYear();
+            const dateString = `${month}/${day}/${year}`;
+            
+            // Search for date string in the dateAdded field
+            query.dateAdded = {
+                $regex: dateString,
+                $options: 'i'
+            };
+        }
+        
+        const jobs = await JobModel.find(query).select('-jobDescription').lean();
+        res.status(200).json({jobs});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
+const getUniqueClientsFromJobs = async (req, res) => {
+    try {
+        const { operatorEmail } = req.query;
+        
+        let query = {};
+        if (operatorEmail) {
+            query.operatorEmail = operatorEmail.toLowerCase();
+        }
+        
+        const jobs = await JobModel.find(query, 'userID').lean();
+        const uniqueUserIDs = [...new Set(jobs.map(job => job.userID).filter(id => 
+            id && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id)
+        ))];
+        
+        res.status(200).json({clients: uniqueUserIDs});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+}
+
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/:email', getClientByEmail);
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
+<<<<<<< Updated upstream
 // Manager routes
 app.get('/api/managers', verifyToken, getAllManagers);
 app.get('/api/managers/:id', verifyToken, getManagerById);
@@ -888,6 +997,133 @@ app.post('/api/managers', verifyToken, verifyAdmin, upload.single('profilePhoto'
 app.put('/api/managers/:id', verifyToken, verifyAdmin, upload.single('profilePhoto'), updateManager);
 app.delete('/api/managers/:id', verifyToken, verifyAdmin, deleteManager);
 app.post('/api/managers/:id/upload-photo', verifyToken, verifyAdmin, upload.single('profilePhoto'), uploadProfilePhoto);
+=======
+// Get managed users for an operation
+const getManagedUsers = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Get client details for managed users
+        const managedUsers = [];
+        for (const userId of operation.managedUsers || []) {
+            // Convert ObjectId to string if needed
+            const userIdStr = userId.toString();
+            
+            const client = await ClientModel.findOne({ userID: userIdStr });
+            if (client) {
+                managedUsers.push({
+                    userID: userIdStr,
+                    name: client.name,
+                    email: client.email || userIdStr,
+                    company: client.company
+                });
+            } else {
+                // If client not found in ClientModel, still show the userID
+                // Check if it's an email format
+                const displayName = userIdStr.includes('@') ? userIdStr.split('@')[0] : `User ${userIdStr.substring(0, 8)}`;
+                managedUsers.push({
+                    userID: userIdStr,
+                    name: displayName,
+                    email: userIdStr.includes('@') ? userIdStr : 'Unknown',
+                    company: 'Unknown'
+                });
+            }
+        }
+        
+        res.status(200).json({ managedUsers });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Add user to managed users
+const addManagedUser = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const { userID } = req.body;
+        
+        if (!userID) {
+            return res.status(400).json({ error: 'userID is required' });
+        }
+        
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Add userID to managedUsers array if not already present (handle ObjectId comparison)
+        const isAlreadyManaged = operation.managedUsers.some(managedId => managedId.toString() === userID);
+        if (!isAlreadyManaged) {
+            operation.managedUsers.push(userID);
+            await operation.save();
+        }
+        
+        res.status(200).json({ message: 'User added to managed users', managedUsers: operation.managedUsers });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Remove user from managed users
+const removeManagedUser = async (req, res) => {
+    try {
+        const { email, userID } = req.params;
+        
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Remove userID from managedUsers array (handle ObjectId comparison)
+        operation.managedUsers = operation.managedUsers.filter(id => id.toString() !== userID);
+        await operation.save();
+        
+        res.status(200).json({ message: 'User removed from managed users', managedUsers: operation.managedUsers });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Get available clients (not managed by this operation)
+const getAvailableClients = async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Get all clients
+        const allClients = await ClientModel.find({}, 'userID name email company').lean();
+        
+        // Filter out clients that are already managed by this operation (handle ObjectId comparison)
+        const availableClients = allClients.filter(client => 
+            !operation.managedUsers.some(managedId => managedId.toString() === client.userID)
+        );
+        
+        res.status(200).json({ availableClients });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Operations routes
+app.get('/api/operations', getAllOperations);
+app.get('/api/operations/:email', getOperationsByEmail);
+app.post('/api/operations', createOrUpdateOperation);
+app.get('/api/operations/:email/jobs', getJobsByOperatorEmail);
+app.get('/api/operations/clients', getUniqueClientsFromJobs);
+app.get('/api/operations/:email/managed-users', getManagedUsers);
+app.post('/api/operations/:email/managed-users', addManagedUser);
+app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
+app.get('/api/operations/:email/available-clients', getAvailableClients);
+>>>>>>> Stashed changes
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
 

@@ -1,12 +1,17 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import ClientDetails from "./ClientDetails";
+import OperationsDetails from "./OperationsDetails";
 import {Link, useNavigate} from 'react-router-dom';
 
+<<<<<<< Updated upstream
 const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
+=======
+const API_BASE = import.meta.env.VITE_BASE || "http://localhost:5000";
+>>>>>>> Stashed changes
 
 // Validate required environment variables
 if (!API_BASE) {
-  console.error('❌ VITE_API_URL environment variable is required');
+  console.error('❌ VITE_BASE environment variable is required');
 }
 
 // ---------------- API ----------------
@@ -357,6 +362,45 @@ function ClientCard({ client, clientDetails, onSelect }) {
           </div>
           <div className="text-sm text-slate-500 truncate">
             {client}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function OperationCard({ operation, onSelect, performanceCount = 0, performanceDate }) {
+  const displayName = operation.name || operation.email.split('@')[0];
+  const initials = displayName.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || operation.email.charAt(0).toUpperCase();
+  
+  return (
+    <button
+      onClick={() => onSelect(operation)}
+      className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+          <span className="text-green-600 font-semibold text-sm">
+            {initials}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-slate-900 truncate">
+            {displayName}
+          </div>
+          <div className="text-sm text-slate-500 truncate">
+            {operation.email}
+          </div>
+          <div className="text-xs text-slate-400 capitalize">
+            {operation.role}
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="text-xs text-slate-500 mb-1">
+            Applied on {new Date(performanceDate).toLocaleDateString('en-GB')}:
+          </div>
+          <div className="bg-green-100 text-green-800 text-sm font-bold px-2 py-1 rounded-full">
+            {performanceCount}
           </div>
         </div>
       </div>
@@ -932,6 +976,20 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   const [selectedJob, setSelectedJob] = useState(null);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientDetails, setClientDetails] = useState({});
+  
+  // Operations-related state
+  const [showOperations, setShowOperations] = useState(false);
+  const [operations, setOperations] = useState([]);
+  const [selectedOperation, setSelectedOperation] = useState(null);
+  const [showOperationDetails, setShowOperationDetails] = useState(false);
+  const [operationDetailsEmail, setOperationDetailsEmail] = useState('');
+  const [operationSearchTerm, setOperationSearchTerm] = useState('');
+  const [operationJobs, setOperationJobs] = useState([]);
+  const [operationFilterDate, setOperationFilterDate] = useState("");
+  const [selectedClientFilter, setSelectedClientFilter] = useState("");
+  const [availableClients, setAvailableClients] = useState([]);
+  const [operationsPerformance, setOperationsPerformance] = useState({});
+  const [performanceDate, setPerformanceDate] = useState(new Date().toISOString().split('T')[0]);
   // const navigate = useNavigate();
   // In-memory caches (TTL-based) for jobs and clients
   const cacheRef = useRef({
@@ -974,7 +1032,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8086'}/api/clients/${encodeURIComponent(email)}`);
+      const response = await fetch(`${import.meta.env.VITE_BASE || 'http://localhost:5000'}/api/clients/${encodeURIComponent(email)}`);
       if (response.ok) {
         const data = await response.json();
         return data.client;
@@ -993,6 +1051,110 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       ...prev,
       [email]: updatedClient
     }));
+  };
+
+  // Operations-related functions
+  const fetchOperations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/operations`);
+      if (response.ok) {
+        const data = await response.json();
+        setOperations(data.operations);
+        // Fetch performance data for all operations
+        await fetchOperationsPerformance(data.operations);
+      }
+    } catch (error) {
+      console.error('Error fetching operations:', error);
+    }
+  };
+
+  const fetchOperationsPerformance = async (operationsList) => {
+    try {
+      const performanceData = {};
+      
+      // Fetch performance for each operation in parallel
+      const promises = operationsList.map(async (operation) => {
+        try {
+          const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operation.email)}/jobs?date=${performanceDate}`);
+          if (response.ok) {
+            const data = await response.json();
+            performanceData[operation.email] = data.jobs.length;
+          } else {
+            performanceData[operation.email] = 0;
+          }
+        } catch (error) {
+          console.error(`Error fetching performance for ${operation.email}:`, error);
+          performanceData[operation.email] = 0;
+        }
+      });
+      
+      await Promise.all(promises);
+      setOperationsPerformance(performanceData);
+    } catch (error) {
+      console.error('Error fetching operations performance:', error);
+    }
+  };
+
+  const fetchOperationJobs = async (operationEmail, date = null, clientFilter = null) => {
+    try {
+      // First, get all jobs for this operator (cache them)
+      const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operationEmail)}/jobs`);
+      if (response.ok) {
+        const data = await response.json();
+        let jobs = data.jobs;
+        
+        // Apply date filter if specified
+        if (date) {
+          const targetDate = new Date(date);
+          const month = targetDate.getMonth() + 1;
+          const day = targetDate.getDate();
+          const year = targetDate.getFullYear();
+          const dateString = `${month}/${day}/${year}`;
+          
+          jobs = jobs.filter(job => {
+            return job.dateAdded && job.dateAdded.includes(dateString);
+          });
+        }
+        
+        // Filter by client if specified
+        if (clientFilter) {
+          jobs = jobs.filter(job => job.userID === clientFilter);
+        }
+        
+        setOperationJobs(jobs);
+      }
+    } catch (error) {
+      console.error('Error fetching operation jobs:', error);
+    }
+  };
+
+  const fetchAvailableClients = async (operationEmail = null) => {
+    try {
+      // Get clients from the cached jobs instead of making a separate API call
+      const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operationEmail)}/jobs`);
+      if (response.ok) {
+        const data = await response.json();
+        const uniqueUserIDs = [...new Set(data.jobs.map(job => job.userID).filter(id => 
+          id && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id)
+        ))];
+        setAvailableClients(uniqueUserIDs);
+      }
+    } catch (error) {
+      console.error('Error fetching available clients:', error);
+    }
+  };
+
+  const handleCloseOperationDetails = () => {
+    setShowOperationDetails(false);
+    setOperationDetailsEmail('');
+  };
+
+  const handleOperationSelect = (operation) => {
+    setSelectedOperation(operation);
+    setShowOperations(false);
+    setLeftPanelOpen(false);
+    fetchOperationJobs(operation.email);
+    fetchAvailableClients(operation.email);
   };
 
   useEffect(() => {
@@ -1041,6 +1203,9 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             setErr("Failed to fetch client data");
           }
         }
+
+        // Fetch operations data
+        await fetchOperations();
       } catch (e) {
         setErr(e.message || "Failed to fetch");
       } finally {
@@ -1048,6 +1213,20 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       }
     })();
   }, []);
+
+  // Effect to handle operation filter changes (date and client)
+  useEffect(() => {
+    if (selectedOperation) {
+      fetchOperationJobs(selectedOperation.email, operationFilterDate, selectedClientFilter);
+    }
+  }, [operationFilterDate, selectedClientFilter, selectedOperation]);
+
+  // Effect to update performance when date changes
+  useEffect(() => {
+    if (operations.length > 0) {
+      fetchOperationsPerformance(operations);
+    }
+  }, [performanceDate, operations]);
 
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
@@ -1171,6 +1350,15 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
     );
   }, [clients, clientSearchTerm]);
 
+  // Filter operations based on search term
+  const filteredOperations = useMemo(() => {
+    if (!operationSearchTerm) return operations;
+    return operations.filter(operation => 
+      operation.name?.toLowerCase().includes(operationSearchTerm.toLowerCase()) ||
+      operation.email?.toLowerCase().includes(operationSearchTerm.toLowerCase())
+    );
+  }, [operations, operationSearchTerm]);
+
   // Right sidebar: jobs filtered by selected status
   const statusFilteredJobs = useMemo(() => {
     if (!selectedStatus) return [];
@@ -1203,20 +1391,60 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
     );
   }
 
+  if (showOperationDetails) {
+    return (
+      <OperationsDetails 
+        operationEmail={operationDetailsEmail} 
+        onClose={handleCloseOperationDetails}
+        userRole={userRole}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       {/* Top Right Buttons */}
       <div className="absolute top-4 right-4 z-30 flex gap-2" />
       
       <div className="flex min-h-[calc(100vh-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg relative">
-      {/* Left: Clients Button - Sliding Panel */}
+      {/* Left: Navigation Buttons - Sliding Panel */}
       <div className={`${leftPanelOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-slate-200 bg-blue-50`}>
         <div className="w-64 p-3 flex flex-col gap-3">
           <button
-            onClick={() => setShowClients(true)}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            onClick={() => {
+              setShowClients(true);
+              setShowOperations(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setRightSidebarOpen(false);
+            }}
+            className={`w-full p-3 rounded-lg transition-colors font-medium ${
+              showClients ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
             Clients
+          </button>
+          <button
+            onClick={() => {
+              setShowOperations(true);
+              setShowClients(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setRightSidebarOpen(false);
+            }}
+            className={`w-full p-3 rounded-lg transition-colors font-medium ${
+              showOperations ? 'bg-green-700 text-white' : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            Operations Team
           </button>
           <Link to={'/email-campaigns'}>
           <button
@@ -1240,9 +1468,17 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
       <button
         onClick={() => {
           if (!leftPanelOpen) {
-            // Opening panel - show client selection
+            // Opening panel - show client selection by default
             setLeftPanelOpen(true);
             setShowClients(true);
+            setShowOperations(false);
+            setSelectedClient(null);
+            setSelectedOperation(null);
+            setSelectedStatus(null);
+            setFilterDate("");
+            setOperationFilterDate("");
+            setSelectedClientFilter("");
+            setRightSidebarOpen(false);
           } else {
             // Closing panel
             setLeftPanelOpen(false);
@@ -1319,6 +1555,196 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Operations View */}
+        {!loading && !err && showOperations && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Select an Operations Team Member</h2>
+            </div>
+            
+            {/* Performance Date Selector */}
+            <div className="mb-6">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-slate-700">Performance Date:</label>
+                <input
+                  type="date"
+                  value={performanceDate}
+                  onChange={(e) => setPerformanceDate(e.target.value)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <div className="text-sm text-slate-600">
+                  Shows jobs applied on selected date
+                </div>
+              </div>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search operations team..."
+                  value={operationSearchTerm}
+                  onChange={(e) => setOperationSearchTerm(e.target.value)}
+                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <svg 
+                  className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Operations Cards Grid */}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredOperations.map((operation) => (
+                <OperationCard 
+                  key={operation._id} 
+                  operation={operation} 
+                  onSelect={handleOperationSelect}
+                  performanceCount={operationsPerformance[operation.email] || 0}
+                  performanceDate={performanceDate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Operations Details View */}
+        {!loading && !err && selectedOperation && !showOperations && (
+          <>
+            {/* Header Section - Operations Jobs Title */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      setSelectedOperation(null);
+                      setShowOperations(true);
+                      setOperationJobs([]);
+                      setOperationFilterDate("");
+                      setSelectedClientFilter("");
+                    }}
+                    className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 font-medium shadow-sm"
+                  >
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </div>
+                    <span>Back to Operations Team</span>
+                  </button>
+                </div>
+                <div className="flex-1 text-center">
+                  <h1 className="text-3xl font-bold text-slate-900">
+                    Operations Dashboard - <span className="text-green-600">{selectedOperation.name || selectedOperation.email}</span>
+                  </h1>
+                  <p className="text-lg text-slate-600 mt-2">
+                    Track job applications and manage client assignments
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowOperationDetails(true);
+                    setOperationDetailsEmail(selectedOperation.email);
+                  }}
+                  className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 font-medium shadow-sm"
+                >
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                  </div>
+                  <span>Personal Details</span>
+                  <svg className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Date Filter Row */}
+            <div className="flex items-center gap-4 mb-6">
+              <label className="text-sm font-medium text-slate-700">Filter by date:</label>
+              <input
+                type="date"
+                value={operationFilterDate}
+                onChange={(e) => setOperationFilterDate(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+              {operationFilterDate && (
+                <>
+                  <button
+                    onClick={() => setOperationFilterDate("")}
+                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-lg">
+                    <span className="text-sm font-medium text-green-800">
+                      Applied on {new Date(operationFilterDate).toLocaleDateString('en-GB')}:
+                    </span>
+                    <span className="text-sm font-bold text-green-900 bg-green-200 px-2 py-0.5 rounded">
+                      {operationJobs.length}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Client Filter Dropdown */}
+            <div className="flex items-center gap-4 mb-6">
+              <label className="text-sm font-medium text-slate-700">Filter by client:</label>
+              <select
+                value={selectedClientFilter}
+                onChange={(e) => setSelectedClientFilter(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="">All Clients</option>
+                {availableClients.map((client) => (
+                  <option key={client} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+              {selectedClientFilter && (
+                <button
+                  onClick={() => setSelectedClientFilter("")}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Jobs Display */}
+            {operationJobs.length === 0 ? (
+              <div className="text-slate-600">
+                No jobs found for the selected filters.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {operationJobs.map((job) => (
+                  <JobCard 
+                    key={job._id || job.jobID || `${job.userID}-${job.joblink}`} 
+                    job={job} 
+                    onJobClick={async (job) => {
+                      setSelectedJob(job);
+                      setShowJobDetails(true);
+                      const desc = await ensureJobDescription(job);
+                      setSelectedJob(prev => prev ? { ...prev, jobDescription: desc } : prev);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {!loading && !err && selectedClient && !showClients && (
