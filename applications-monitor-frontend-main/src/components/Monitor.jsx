@@ -3,11 +3,7 @@ import ClientDetails from "./ClientDetails";
 import OperationsDetails from "./OperationsDetails";
 import {Link, useNavigate} from 'react-router-dom';
 
-<<<<<<< Updated upstream
-const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
-=======
 const API_BASE = import.meta.env.VITE_BASE || "http://localhost:5000";
->>>>>>> Stashed changes
 
 // Validate required environment variables
 if (!API_BASE) {

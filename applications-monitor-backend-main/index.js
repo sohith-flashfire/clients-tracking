@@ -4,11 +4,8 @@ import { JobModel } from './JobModel.js';
 import { ClientModel } from './ClientModel.js';
 import { UserModel } from './UserModel.js';
 import { SessionKeyModel } from './SessionKeyModel.js';
-<<<<<<< Updated upstream
 import { ManagerModel } from './ManagerModel.js';
-=======
 import OperationsModel from './OperationsModel.js';
->>>>>>> Stashed changes
 import cors from 'cors'
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -989,7 +986,6 @@ app.get('/api/clients/:email', getClientByEmail);
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
-<<<<<<< Updated upstream
 // Manager routes
 app.get('/api/managers', verifyToken, getAllManagers);
 app.get('/api/managers/:id', verifyToken, getManagerById);
@@ -997,7 +993,6 @@ app.post('/api/managers', verifyToken, verifyAdmin, upload.single('profilePhoto'
 app.put('/api/managers/:id', verifyToken, verifyAdmin, upload.single('profilePhoto'), updateManager);
 app.delete('/api/managers/:id', verifyToken, verifyAdmin, deleteManager);
 app.post('/api/managers/:id/upload-photo', verifyToken, verifyAdmin, upload.single('profilePhoto'), uploadProfilePhoto);
-=======
 // Get managed users for an operation
 const getManagedUsers = async (req, res) => {
     try {
@@ -1123,7 +1118,6 @@ app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
->>>>>>> Stashed changes
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
 
