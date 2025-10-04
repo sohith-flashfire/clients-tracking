@@ -42,7 +42,8 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
     },
     amountPaid: 0,
     amountPaidDate: '',
-    modeOfPayment: 'paypal'
+    modeOfPayment: 'paypal',
+    status: 'active'
   });
 
   useEffect(() => {
@@ -105,7 +106,8 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
           },
           amountPaid: data.client.amountPaid || 0,
           amountPaidDate: data.client.amountPaidDate || '',
-          modeOfPayment: data.client.modeOfPayment || 'paypal'
+          modeOfPayment: data.client.modeOfPayment || 'paypal',
+          status: data.client.status || 'active'
         });
       } else {
         // Client doesn't exist, show empty form for creation
@@ -430,6 +432,36 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
                         ) : (
                           <div className="px-4 py-3 bg-gradient-to-r from-white to-slate-50 border border-slate-200 rounded-xl text-slate-700 shadow-sm capitalize">
                             {client?.modeOfPayment?.replace('_', ' ') || 'Not set'}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Client Status
+                        </label>
+                        {isEditing ? (
+                          <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        ) : (
+                          <div className={`px-4 py-3 rounded-xl text-white font-semibold shadow-sm ${
+                            client?.status === 'active' 
+                              ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                              : 'bg-gradient-to-r from-gray-500 to-gray-600'
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${
+                                client?.status === 'active' ? 'bg-green-200' : 'bg-gray-200'
+                              }`}></div>
+                              {client?.status === 'active' ? 'Active' : 'Inactive'}
+                            </div>
                           </div>
                         )}
                       </div>
