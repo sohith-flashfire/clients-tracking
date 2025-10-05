@@ -13,6 +13,16 @@ export default function Layout({ children }) {
                 Clients
               </button>
             </Link>
+            <Link to="/operations">
+              <button className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                Operations Team
+              </button>
+            </Link>
+            <Link to="/clients/new">
+              <button className="w-full p-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium">
+                Register Client
+              </button>
+            </Link>
             <Link to="/manager-dashboard">
               <button className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
                 Manager Dashboard
