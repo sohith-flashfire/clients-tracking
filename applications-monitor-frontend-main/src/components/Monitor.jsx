@@ -1283,6 +1283,20 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
     }
   }, [performanceDate, operations]);
 
+  // Effect to fetch client details when selectedClient changes
+  useEffect(() => {
+    if (selectedClient) {
+      fetchClientDetails(selectedClient).then(client => {
+        if (client) {
+          setClientDetails(prev => ({
+            ...prev,
+            [selectedClient]: client
+          }));
+        }
+      });
+    }
+  }, [selectedClient]);
+
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
     // Get all clients that have jobs from the jobs data
