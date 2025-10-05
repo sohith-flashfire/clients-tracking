@@ -75,8 +75,7 @@ const RegisterClient = () => {
     { value: 'Free Trial', label: 'Free Trial', description: 'Basic features to get started' },
     { value: 'Ignite', label: 'Ignite', description: 'Perfect for job seekers starting their journey' },
     { value: 'Professional', label: 'Professional', description: 'Advanced features for serious job seekers' },
-    { value: 'Executive', label: 'Executive', description: 'Premium features for executive positions' },
-    { value: 'Enterprise', label: 'Enterprise', description: 'Full suite for organizations' }
+    { value: 'Executive', label: 'Executive', description: 'Premium features for executive positions' }
   ];
 
   const handleInputChange = (e) => {
@@ -397,3 +396,4 @@ const RegisterClient = () => {
 };
 
 export default RegisterClient;
+
