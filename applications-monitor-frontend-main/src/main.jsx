@@ -54,6 +54,10 @@ const router = createBrowserRouter([
       {
         path : '/manager-dashboard',
         element: <ManagerDashboard />
+      },
+      {
+        path : '/operations',
+        element: <Monitor />
       }
     ]
   }
