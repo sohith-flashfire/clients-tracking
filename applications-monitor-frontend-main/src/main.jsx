@@ -39,13 +39,9 @@ const router = createBrowserRouter([
         element: <Monitor />,
         index : true
       },
-      // {
-      //   path: 'admin',
-      //   element: <AdminLayout />,
-      // },
       {
         path: '/clients/new',
-        element : <RegisterClient />
+        element: <Monitor />
       },
       {
         path : '/monitor-clients',
