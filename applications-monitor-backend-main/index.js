@@ -72,7 +72,7 @@ const allowedOrigins = [
   "https://utm-track-frontend.vercel.app",
   "https://dashboardtracking.vercel.app",
   "https://clients-tracking.vercel.app",
-  "https://dashboardtracking.vercel.app/",
+  // "https://dashboardtracking.vercel.app/",
   "https://portal.flashfirejobs.com",
   "https://www.portal.flashfirejobs.com",
   "https://flashfire-dashboard-frontend.vercel.app",
