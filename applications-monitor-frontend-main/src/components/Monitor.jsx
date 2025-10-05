@@ -1244,7 +1244,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           setClientDetails(cacheRef.current.clients.data);
         } else {
           // Fetch clients from FlashFire Dashboard Backend
-          const FLASHFIRE_API_BASE = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'http://localhost:8086';
+          const FLASHFIRE_API_BASE = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
           const clientsResponse = await fetch(`${FLASHFIRE_API_BASE}/api/clients/all`);
           if (clientsResponse.ok) {
             const clientsData = await clientsResponse.json();
