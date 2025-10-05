@@ -999,6 +999,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const [clientDetails, setClientDetails] = useState({});
   
   // Operations-related state
@@ -1411,13 +1412,30 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
     }
   }, [selectedClient, filterDate, clientDetails, jobs]);
 
-  // Filter clients based on search term
+  // Filter clients based on search term and status
   const filteredClients = useMemo(() => {
-    if (!clientSearchTerm) return clients;
-    return clients.filter(client => 
-      client.toLowerCase().includes(clientSearchTerm.toLowerCase())
-    );
-  }, [clients, clientSearchTerm]);
+    let filtered = clients;
+    
+    // Filter by search term
+    if (clientSearchTerm) {
+      filtered = filtered.filter(client => 
+        client.toLowerCase().includes(clientSearchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by status
+    if (clientStatusFilter !== 'all') {
+      filtered = filtered.filter(client => {
+        const clientDetail = clientDetails[client];
+        if (!clientDetail) return false;
+        
+        const status = clientDetail.status?.toLowerCase();
+        return status === clientStatusFilter;
+      });
+    }
+    
+    return filtered;
+  }, [clients, clientSearchTerm, clientStatusFilter, clientDetails]);
 
   // Filter operations based on search term
   const filteredOperations = useMemo(() => {
@@ -1490,6 +1508,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setFilterDate("");
               setOperationFilterDate("");
               setSelectedClientFilter("");
+              setClientStatusFilter("all");
               setRightSidebarOpen(false);
               navigate('/');
             }}
@@ -1510,6 +1529,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setFilterDate("");
               setOperationFilterDate("");
               setSelectedClientFilter("");
+              setClientStatusFilter("all");
               setRightSidebarOpen(false);
               navigate('/');
             }}
@@ -1530,6 +1550,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setFilterDate("");
               setOperationFilterDate("");
               setSelectedClientFilter("");
+              setClientStatusFilter("all");
               setRightSidebarOpen(false);
               navigate('/clients/new');
             }}
@@ -1550,6 +1571,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setFilterDate("");
               setOperationFilterDate("");
               setSelectedClientFilter("");
+              setClientStatusFilter("all");
               setRightSidebarOpen(false);
               navigate('/manager-dashboard');
             }}
@@ -1575,6 +1597,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             setFilterDate("");
             setOperationFilterDate("");
             setSelectedClientFilter("");
+            setClientStatusFilter("all");
             setRightSidebarOpen(false);
             navigate('/');
           } else {
@@ -1616,9 +1639,9 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             </div>
             
             
-            {/* Search Bar */}
-            <div className="mb-6">
-              <div className="relative">
+            {/* Search Bar and Status Filter */}
+            <div className="mb-6 flex gap-4">
+              <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Search clients..."
@@ -1634,6 +1657,19 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
+              </div>
+              
+              {/* Status Filter Dropdown */}
+              <div className="flex-shrink-0">
+                <select
+                  value={clientStatusFilter}
+                  onChange={(e) => setClientStatusFilter(e.target.value)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-700"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             </div>
 
