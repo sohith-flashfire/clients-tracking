@@ -72,12 +72,11 @@ const allowedOrigins = [
   "https://utm-track-frontend.vercel.app",
   "https://dashboardtracking.vercel.app",
   "https://clients-tracking.vercel.app",
-  // "https://dashboardtracking.vercel.app/",
+  "https://dashboardtracking.vercel.app/",
   "https://portal.flashfirejobs.com",
   "https://www.portal.flashfirejobs.com",
   "https://flashfire-dashboard-frontend.vercel.app",
   "https://flashfire-dashboard.vercel.app",
-  "https://flashfire-dashboard.vercel.app/",
   
   // Additional origins from environment variable
   ...(process.env.ALLOWED_ORIGINS?.split(",") || [])
@@ -1127,6 +1126,28 @@ const getAvailableClients = async (req, res) => {
     }
 }
 
+// Get client details from dashboardtrackings collection
+const getClientDetails = async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        // Find client in dashboardtrackings collection
+        const client = await ClientModel.findOne({ email: email.toLowerCase() });
+        
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found in dashboardtrackings' });
+        }
+        
+        res.status(200).json({ 
+            success: true, 
+            client: client 
+        });
+    } catch (error) {
+        console.error('Error fetching client details:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // Operations routes
 app.get('/api/operations', getAllOperations);
 app.get('/api/operations/:email', getOperationsByEmail);
@@ -1137,6 +1158,9 @@ app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
+
+// Client details route
+app.get('/api/clients/:email', getClientDetails);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
 
