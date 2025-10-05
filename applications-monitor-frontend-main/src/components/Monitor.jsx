@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import ClientDetails from "./ClientDetails";
 import OperationsDetails from "./OperationsDetails";
+import RegisterClient from "./RegisterClient";
 import {Link, useNavigate} from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_BASE || "http://localhost:10000";
+const API_BASE = import.meta.env.VITE_BASE || "https://applications-monitor-api.flashfirejobs.com";
 
 // Validate required environment variables
 if (!API_BASE) {
@@ -1013,7 +1014,36 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   const [availableClients, setAvailableClients] = useState([]);
   const [operationsPerformance, setOperationsPerformance] = useState({});
   const [performanceDate, setPerformanceDate] = useState(new Date().toISOString().split('T')[0]);
-  // const navigate = useNavigate();
+  
+  // Register Client state
+  const [showRegisterClient, setShowRegisterClient] = useState(false);
+  const navigate = useNavigate();
+  
+  // Check if we're on the register client route
+  useEffect(() => {
+    if (window.location.pathname === '/clients/new') {
+      setShowRegisterClient(true);
+      setShowClients(false);
+      setShowOperations(false);
+      setSelectedClient(null);
+      setSelectedOperation(null);
+      setSelectedStatus(null);
+    } else if (window.location.pathname === '/manager-dashboard') {
+      setShowRegisterClient(false);
+      setShowClients(false);
+      setShowOperations(false);
+      setSelectedClient(null);
+      setSelectedOperation(null);
+      setSelectedStatus(null);
+    } else {
+      setShowRegisterClient(false);
+      // Default to showing clients if no specific route
+      if (window.location.pathname === '/' || window.location.pathname === '/monitor-clients') {
+        setShowClients(true);
+        setShowOperations(false);
+      }
+    }
+  }, []);
   // In-memory caches (TTL-based) for jobs and clients
   const cacheRef = useRef({
     jobs: { data: null, ts: 0 },
@@ -1055,7 +1085,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
   // Fetch client details
   const fetchClientDetails = async (email) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BASE || 'http://localhost:10000'}/api/clients/${encodeURIComponent(email)}`);
+      const response = await fetch(`${import.meta.env.VITE_BASE || 'https://applications-monitor-api.flashfirejobs.com'}/api/clients/${encodeURIComponent(email)}`);
       if (response.ok) {
         const data = await response.json();
         return data.client;
@@ -1213,11 +1243,13 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
         if (cacheRef.current.clients.data && now - cacheRef.current.clients.ts < CACHE_TTL_MS) {
           setClientDetails(cacheRef.current.clients.data);
         } else {
-          const clientsResponse = await fetch(`${API_BASE}/api/clients`);
+          // Fetch clients from FlashFire Dashboard Backend
+          const FLASHFIRE_API_BASE = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'http://localhost:8086';
+          const clientsResponse = await fetch(`${FLASHFIRE_API_BASE}/api/clients/all`);
           if (clientsResponse.ok) {
             const clientsData = await clientsResponse.json();
             const clientDetailsMap = {};
-            clientsData.clients.forEach(client => {
+            clientsData.data.forEach(client => {
               clientDetailsMap[client.email] = client;
             });
             cacheRef.current.clients = { data: clientDetailsMap, ts: now };
@@ -1437,6 +1469,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             onClick={() => {
               setShowClients(true);
               setShowOperations(false);
+              setShowRegisterClient(false);
               setSelectedClient(null);
               setSelectedOperation(null);
               setSelectedStatus(null);
@@ -1444,6 +1477,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setOperationFilterDate("");
               setSelectedClientFilter("");
               setRightSidebarOpen(false);
+              navigate('/');
             }}
             className={`w-full p-3 rounded-lg transition-colors font-medium ${
               showClients ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -1455,6 +1489,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             onClick={() => {
               setShowOperations(true);
               setShowClients(false);
+              setShowRegisterClient(false);
               setSelectedClient(null);
               setSelectedOperation(null);
               setSelectedStatus(null);
@@ -1462,6 +1497,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               setOperationFilterDate("");
               setSelectedClientFilter("");
               setRightSidebarOpen(false);
+              navigate('/');
             }}
             className={`w-full p-3 rounded-lg transition-colors font-medium ${
               showOperations ? 'bg-green-700 text-white' : 'bg-green-600 text-white hover:bg-green-700'
@@ -1469,13 +1505,44 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Operations Team
           </button>
-          <Link to={'/manager-dashboard'}>
           <button
+            onClick={() => {
+              setShowRegisterClient(true);
+              setShowClients(false);
+              setShowOperations(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setRightSidebarOpen(false);
+              navigate('/clients/new');
+            }}
+            className={`w-full p-3 rounded-lg transition-colors font-medium ${
+              showRegisterClient ? 'bg-orange-700 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
+            }`}
+          >
+            Register Client
+          </button>
+          <button
+            onClick={() => {
+              setShowRegisterClient(false);
+              setShowClients(false);
+              setShowOperations(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setRightSidebarOpen(false);
+              navigate('/manager-dashboard');
+            }}
             className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
           >
             Manager Dashboard
           </button>
-          </Link>
         </div>
       </div>
 
@@ -1487,6 +1554,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             setLeftPanelOpen(true);
             setShowClients(true);
             setShowOperations(false);
+            setShowRegisterClient(false);
             setSelectedClient(null);
             setSelectedOperation(null);
             setSelectedStatus(null);
@@ -1494,6 +1562,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
             setOperationFilterDate("");
             setSelectedClientFilter("");
             setRightSidebarOpen(false);
+            navigate('/');
           } else {
             // Closing panel
             setLeftPanelOpen(false);
@@ -1513,23 +1582,23 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
 
 
       {/* Middle: Content Area */}
-      <div className="flex-1 overflow-auto border-r border-slate-200 p-4 bg-slate-50">
+      <div className="flex-1 overflow-auto border-r border-slate-200 bg-slate-50">
         
-        {loading && <div className="text-slate-700">Loading…</div>}
-        {!loading && err && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        {showRegisterClient && (
+          <RegisterClient />
+        )}
+        
+        {!showRegisterClient && loading && <div className="text-slate-700 p-4">Loading…</div>}
+        {!showRegisterClient && !loading && err && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4">
             <div className="text-red-600 font-semibold mb-2">Error: {err}</div>
           </div>
         )}
 
-        {!loading && !err && showClients && (
+        {!showRegisterClient && !loading && !err && showClients && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Select a Client</h2>
-              <Link to={'/clients/new'} className="mb-4 inline-block">
-              <button className="border p-2 m-2 font-mono bg-blue-400 rounded-2xl hover:text-white hover:bg-blue-700">+ New Client</button>
-              </Link>
-              
             </div>
             
             
@@ -1554,6 +1623,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
               </div>
             </div>
 
+
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredClients.map((client) => (
@@ -1573,7 +1643,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
         )}
 
         {/* Operations View */}
-        {!loading && !err && showOperations && (
+        {!showRegisterClient && !loading && !err && showOperations && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Select an Operations Team Member</h2>
@@ -1632,7 +1702,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
         )}
 
         {/* Operations Details View */}
-        {!loading && !err && selectedOperation && !showOperations && (
+        {!showRegisterClient && !loading && !err && selectedOperation && !showOperations && (
           <>
             {/* Header Section - Operations Jobs Title */}
             <div className="mb-6">
