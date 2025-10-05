@@ -27,7 +27,7 @@ import { upload } from './utils/cloudinary.js';
 
 
 // Environment Variables
-const PORT = process.env.PORT || 8086;
+const PORT = process.env.PORT || 10000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
@@ -57,18 +57,29 @@ const app = express();
 // }));
 // app.use(express.json());
 const allowedOrigins = [
+  // Development origins
+  "http://localhost:3000",
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  
+  // Production origins
   "https://flashfire-frontend-hoisted.vercel.app",
   "https://flashfirejobs.com",
   "https://www.flashfirejobs.com",
   "https://flashfire-frontend-hoisted.vercel.app/",
   "https://utm-track-frontend.vercel.app",
-  'https://dashboardtracking.vercel.app',
+  "https://dashboardtracking.vercel.app",
   "https://clients-tracking.vercel.app",
-  "https://dashboardtracking.vercel.app"
-  // "https://dashboardtracking.vercel.app/"
+  "https://dashboardtracking.vercel.app/",
+  "https://portal.flashfirejobs.com",
+  "https://www.portal.flashfirejobs.com",
+  "https://flashfire-dashboard-frontend.vercel.app",
+  "https://flashfire-dashboard.vercel.app",
   
+  // Additional origins from environment variable
+  ...(process.env.ALLOWED_ORIGINS?.split(",") || [])
 ];
 
 app.use(
@@ -1127,3 +1138,4 @@ app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
+
