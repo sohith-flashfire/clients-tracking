@@ -68,7 +68,7 @@ function App() {
   if (user && user.role === 'admin') {
     // Redirect only if on the root page
     if (location.pathname === '/') {
-      navigate('/monitor-clients', { replace: true });
+      navigate('/admin-dashboard', { replace: true });
     }
   } else if (user && user.role == 'team_lead') {
     if (location.pathname === '/') {
