@@ -596,7 +596,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
               </button>
             </>
           ) : (
-            userRole === 'admin' ? (
+            currentUserRole === 'admin' ? (
               <button
                 onClick={() => setIsEditing(true)}
                 className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-colors"
@@ -1055,7 +1055,19 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 }
 
 // ---------------- Main Component ----------------
-export default function Monitor({ onClose, userRole = 'team_lead' }) {
+export default function Monitor({ onClose, userRole }) {
+  // Get user role dynamically from localStorage
+  const getUserRole = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      return user?.role || 'team_lead';
+    } catch {
+      return 'team_lead';
+    }
+  };
+  
+  // Use dynamic role or fallback to prop
+  const currentUserRole = userRole || getUserRole();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -1544,7 +1556,7 @@ export default function Monitor({ onClose, userRole = 'team_lead' }) {
       <ClientDetails 
         clientEmail={clientDetailsEmail} 
         onClose={handleCloseClientDetails}
-        userRole={userRole}
+        userRole={currentUserRole}
       />
     );
   }
@@ -1554,7 +1566,7 @@ export default function Monitor({ onClose, userRole = 'team_lead' }) {
       <OperationsDetails 
         operationEmail={operationDetailsEmail} 
         onClose={handleCloseOperationDetails}
-        userRole={userRole}
+        userRole={currentUserRole}
       />
     );
   }
@@ -1610,7 +1622,7 @@ export default function Monitor({ onClose, userRole = 'team_lead' }) {
           >
             Operations Team
           </button>
-          {userRole === 'admin' && (
+          {currentUserRole === 'admin' && (
           <button
             onClick={() => {
               setShowRegisterClient(true);
@@ -1633,7 +1645,7 @@ export default function Monitor({ onClose, userRole = 'team_lead' }) {
             Register Client
           </button>
           )}
-          {userRole === 'admin' && (
+          {currentUserRole === 'admin' && (
           <button
             onClick={() => {
               setShowRegisterClient(false);
@@ -2013,7 +2025,7 @@ export default function Monitor({ onClose, userRole = 'team_lead' }) {
                 clientEmail={selectedClient}
                 clientDetails={clientDetails[selectedClient]}
                 onClientUpdate={handleClientUpdate}
-                userRole={userRole}
+                userRole={currentUserRole}
               />
             </div>
 
