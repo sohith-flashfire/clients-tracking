@@ -985,6 +985,14 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 
 // ---------------- Main Component ----------------
 export default function Monitor({ onClose, userRole = 'admin' }) {
+  const localRole = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user')) || null;
+      return u?.role || userRole;
+    } catch {
+      return userRole;
+    }
+  })();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -1539,6 +1547,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Operations Team
           </button>
+          {localRole === 'admin' && (
           <button
             onClick={() => {
               setShowRegisterClient(true);
@@ -1560,6 +1569,8 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Register Client
           </button>
+          )}
+          {localRole === 'admin' && (
           <button
             onClick={() => {
               setShowRegisterClient(false);
@@ -1579,6 +1590,7 @@ export default function Monitor({ onClose, userRole = 'admin' }) {
           >
             Manager Dashboard
           </button>
+          )}
         </div>
       </div>
 
