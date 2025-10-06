@@ -29,6 +29,16 @@ import RegisterClient from './components/RegisterClient';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import ManagerDashboard from './components/ManagerDashboard.jsx';
 
+// Helper function to get user role safely
+const getUserRole = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user?.role || 'team_lead'; // Default to team_lead for security
+  } catch {
+    return 'team_lead'; // Default to team_lead if parsing fails
+  }
+};
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -36,16 +46,16 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />,
+        element: <Monitor userRole={getUserRole()} />,
         index : true
       },
       {
         path: '/clients/new',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
+        element: <Monitor userRole={getUserRole()} />
       },
       {
         path : '/monitor-clients',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
+        element: <Monitor userRole={getUserRole()} />
       },
       {
         path : '/admin-dashboard',
@@ -57,7 +67,7 @@ const router = createBrowserRouter([
       },
       {
         path : '/operations',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
+        element: <Monitor userRole={getUserRole()} />
       }
     ]
   }
