@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {Link, useNavigate} from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
@@ -17,6 +18,7 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: email/password, 2: session key
   const [userRole, setUserRole] = useState(null);
+  const navigate= useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -66,7 +68,11 @@ export default function Login({ onLogin }) {
           if (loginResponse.ok) {
             localStorage.setItem('authToken', loginData.token);
             localStorage.setItem('user', JSON.stringify(loginData.user));
-            onLogin(loginData.user);
+            setTimeout(()=>{
+              onLogin(loginData.user);
+              
+            },200)
+            
           } else {
             setError(loginData.error || 'Login failed');
           }
@@ -103,7 +109,11 @@ export default function Login({ onLogin }) {
       if (response.ok) {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.user);
+        setTimeout(()=>{
+            onLogin(data.user)
+        },200)
+        
+        
       } else {
         setError(data.error || 'Invalid session key');
       }
