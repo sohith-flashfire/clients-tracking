@@ -90,10 +90,8 @@ console.log(user)
 
   // Admin user - show admin dashboard or portal based on current view
   if (user.role === 'admin') {
-    if (currentView === 'admin') {
-      return <AdminDashboard user={user} onLogout={handleLogout} onGoToPortal={handleGoToPortal} />;
-    } else {
-      return (
+    // Always use router for admin users to enable proper navigation
+    return (
         <div>
           {/* Admin Navigation Bar */}
           <div className="bg-white shadow-sm border-b">
@@ -115,10 +113,10 @@ console.log(user)
                 </div>
                 <div className="flex gap-3">
                   <Link to={location.pathname === "/admin-dashboard" ? "/monitor-clients" : "/admin-dashboard"}>
-      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-        {location.pathname === "/admin-dashboard" ? "Monitor Clients" : "Admin Dashboard"}
-      </button>
-    </Link>
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                      {location.pathname === "/admin-dashboard" ? "Monitor Clients" : "Admin Dashboard"}
+                    </button>
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
@@ -129,12 +127,10 @@ console.log(user)
               </div>
             </div>
           </div>
-          {/* <Monitor userRole={user?.role || 'team_lead'} /> */}
-           <Outlet />
+          <Outlet />
         </div>
       );
     }
-  }
 
   // Team lead user - show portal with logout option
   return (
