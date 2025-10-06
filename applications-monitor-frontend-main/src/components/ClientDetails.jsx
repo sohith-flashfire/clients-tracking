@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_BASE || "http://localhost:10000";
 
 const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
   const [client, setClient] = useState(null);
@@ -43,7 +43,10 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
     amountPaid: 0,
     amountPaidDate: '',
     modeOfPayment: 'paypal',
-    status: 'active'
+    status: 'active',
+    jobStatus: 'still_searching',
+    companyName: '',
+    lastApplicationDate: ''
   });
 
   useEffect(() => {
@@ -107,7 +110,10 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
           amountPaid: data.client.amountPaid || 0,
           amountPaidDate: data.client.amountPaidDate || '',
           modeOfPayment: data.client.modeOfPayment || 'paypal',
-          status: data.client.status || 'active'
+          status: data.client.status || 'active',
+          jobStatus: data.client.jobStatus || 'still_searching',
+          companyName: data.client.companyName || '',
+          lastApplicationDate: data.client.lastApplicationDate || ''
         });
       } else {
         // Client doesn't exist, show empty form for creation
@@ -467,6 +473,83 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
                       </div>
                     </>
                   )}
+                  
+                  {/* Job Status and Company Name - Visible to all users */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Job Status
+                    </label>
+                    {isEditing ? (
+                      <select
+                        name="jobStatus"
+                        value={formData.jobStatus}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md"
+                      >
+                        <option value="still_searching">Still Searching</option>
+                        <option value="job_done">Job Done</option>
+                      </select>
+                    ) : (
+                      <div className={`px-4 py-3 rounded-xl text-white font-semibold shadow-sm ${
+                        client?.jobStatus === 'job_done' 
+                          ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                          : 'bg-gradient-to-r from-orange-500 to-orange-600'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            client?.jobStatus === 'job_done' ? 'bg-green-200' : 'bg-orange-200'
+                          }`}></div>
+                          {client?.jobStatus === 'job_done' ? 'Job Done' : 'Still Searching'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Company Name - Only enabled when Job Status is "Job Done" */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Company Name
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        name="companyName"
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                        disabled={formData.jobStatus !== 'job_done'}
+                        className={`w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md ${
+                          formData.jobStatus !== 'job_done' 
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                            : 'bg-white'
+                        }`}
+                        placeholder={formData.jobStatus !== 'job_done' ? 'Select "Job Done" to enable' : 'Enter company name'}
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-white to-slate-50 border border-slate-200 rounded-xl text-slate-700 shadow-sm">
+                        {client?.companyName || <span className="text-slate-400 italic">Not set</span>}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Last Application Date */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Last Application Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        name="lastApplicationDate"
+                        value={formData.lastApplicationDate}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white shadow-sm hover:shadow-md"
+                      />
+                    ) : (
+                      <div className="px-4 py-3 bg-gradient-to-r from-white to-slate-50 border border-slate-200 rounded-xl text-slate-700 shadow-sm">
+                        {client?.lastApplicationDate ? new Date(client.lastApplicationDate).toLocaleDateString('en-GB') : <span className="text-slate-400 italic">Not set</span>}
+                      </div>
+                    )}
+                      </div>
                 </div>
               </div>
             )}
