@@ -1397,7 +1397,7 @@ if (clientsResponse.ok) {
     .filter(validEmail);
 
   setClientsPostFilter(clientsData.clients); // <-- THIS is your base now
-  console.log(clientsPostFilter);
+  // console.log(clientsPostFilter);
   // keep your details map for name/status lookups
   const clientDetailsMap = {};
   (clientsData?.data || []).forEach(client => {
@@ -1727,48 +1727,50 @@ const filteredClients = useMemo(() => {
           </button>
           {userRole === 'admin' && (
           <button
-            onClick={() => {
-              setShowRegisterClient(true);
-              setShowClients(false);
-              setShowOperations(false);
-              setSelectedClient(null);
-              setSelectedOperation(null);
-              setSelectedStatus(null);
-              setFilterDate("");
-              setOperationFilterDate("");
-              setSelectedClientFilter("");
-              setClientStatusFilter("all");
-              setRightSidebarOpen(false);
-              navigate('/clients/new');
-            }}
-            className={`w-full p-3 rounded-lg transition-colors font-medium ${
-              showRegisterClient ? 'bg-orange-700 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
-            }`}
-          >
-            Register Client
-          </button>
-          )}
-          {userRole === 'admin' && (
-          <button
-            onClick={() => {
-              setShowRegisterClient(false);
-              setShowClients(false);
-              setShowOperations(false);
-              setSelectedClient(null);
-              setSelectedOperation(null);
-              setSelectedStatus(null);
-              setFilterDate("");
-              setOperationFilterDate("");
-              setSelectedClientFilter("");
-              setClientStatusFilter("all");
-              setRightSidebarOpen(false);
-              navigate('/manager-dashboard');
-            }}
-            className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-          >
-            Manager Dashboard
-          </button>
-          )}
+  onClick={() => {
+    setShowRegisterClient(true);
+    setShowClients(false);
+    setShowOperations(false);
+    setSelectedClient(null);
+    setSelectedOperation(null);
+    setSelectedStatus(null);
+    setFilterDate("");
+    setOperationFilterDate("");
+    setSelectedClientFilter("");
+    setClientStatusFilter("all");
+    setRightSidebarOpen(false);
+    navigate('/clients/new');
+  }}
+  className={`w-full p-3 rounded-lg transition-colors font-medium ${
+    showRegisterClient ? 'bg-orange-700 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
+  } ${JSON.parse(localStorage.getItem('user') || '{}')?.role === 'team_lead' ? 'hidden' : ''}`}
+>
+  Register Client
+</button>
+
+<button
+  onClick={() => {
+    setShowRegisterClient(false);
+    setShowClients(false);
+    setShowOperations(false);
+    setSelectedClient(null);
+    setSelectedOperation(null);
+    setSelectedStatus(null);
+    setFilterDate("");
+    setOperationFilterDate("");
+    setSelectedClientFilter("");
+    setClientStatusFilter("all");
+    setRightSidebarOpen(false);
+    navigate('/manager-dashboard');
+  }}
+  className={`w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium ${
+    JSON.parse(localStorage.getItem('user') || '{}')?.role === 'team_lead' ? 'hidden' : ''
+  }`}
+>
+  Manager Dashboard
+</button>
+
+
         </div>
       </div>
 
@@ -1868,7 +1870,7 @@ const filteredClients = useMemo(() => {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredClients.map((client) => (
                 <ClientCard 
-                  key={client} 
+                  key={client.email} 
                   client={client} 
                   clientDetails={clientDetails}
                   onSelect={(client) => {

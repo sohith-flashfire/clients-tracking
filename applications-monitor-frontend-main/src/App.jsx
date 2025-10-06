@@ -14,7 +14,7 @@ function App() {
   const [currentView, setCurrentView] = useState('portal'); // 'portal' or 'admin'
   const location = useLocation();
   const navigate = useNavigate();
-console.log(user)
+// console.log(user)
   // ✅ Check for logged-in user on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
