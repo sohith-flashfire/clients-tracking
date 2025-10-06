@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import Monitor from './components/Monitor';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 function App() {
   const [user, setUser] = useState(()=>{localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null });
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('portal'); // 'portal' or 'admin'
   const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     // Check if user is already logged in
     const savedUser = localStorage.getItem('user');
@@ -18,6 +19,16 @@ function App() {
       try {
         const userData = JSON.parse(savedUser);
         setUser(userData);
+        setCurrentView(userData.role === 'admin' ? 'admin' : 'portal');
+        
+        // Navigate based on user role and current location
+        if (location.pathname === '/' || location.pathname === '/login') {
+          if (userData.role === 'admin') {
+            navigate('/admin-dashboard');
+          } else {
+            navigate('/monitor-clients');
+          }
+        }
       } catch (error) {
         // Clear invalid data
         localStorage.removeItem('user');
@@ -26,12 +37,19 @@ function App() {
     }
     
     setLoading(false);
-  }, []);
+  }, [location.pathname, navigate]);
 console.log(user)
   const handleLogin = (userData) => {
     setUser(userData);
     // Set default view based on user role
     setCurrentView(userData.role === 'admin' ? 'admin' : 'portal');
+    
+    // Navigate based on user role
+    if (userData.role === 'admin') {
+      navigate('/admin-dashboard');
+    } else {
+      navigate('/monitor-clients');
+    }
   };
 
   const handleLogout = () => {
@@ -62,6 +80,12 @@ console.log(user)
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  // Check if team lead is trying to access admin routes
+  if (user.role === 'team_lead' && (location.pathname === '/admin-dashboard' || location.pathname === '/manager-dashboard')) {
+    navigate('/monitor-clients');
+    return null;
   }
 
   // Admin user - show admin dashboard or portal based on current view
