@@ -49,7 +49,7 @@ const router = createBrowserRouter([
       },
       {
         path : '/admin-dashboard',
-        element: <AdminDashboard />
+        element: <AdminDashboard user={JSON.parse(localStorage.getItem('user'))} />
       },
       {
         path : '/manager-dashboard',
