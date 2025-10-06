@@ -8,8 +8,9 @@ if (!API_BASE) {
   console.error('❌ VITE_BASE environment variable is required');
 }
 
-export default function AdminDashboard({ user }) {
+export default function AdminDashboard() {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
