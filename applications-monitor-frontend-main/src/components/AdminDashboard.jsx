@@ -168,20 +168,6 @@ export default function AdminDashboard({ user }) {
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
               <p className="text-gray-600">Welcome, {user?.email}</p>
             </div>
-            <div className="flex gap-3">
-              <Link
-                to="/monitor-clients"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Monitor Clients
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
           </div>
         </div>
       </div>
