@@ -29,16 +29,6 @@ import RegisterClient from './components/RegisterClient';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import ManagerDashboard from './components/ManagerDashboard.jsx';
 
-// Helper function to get user role safely
-const getUserRole = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user'));
-    return user?.role || 'team_lead'; // Default to team_lead for security
-  } catch {
-    return 'team_lead'; // Default to team_lead if parsing fails
-  }
-};
-
 const router = createBrowserRouter([
   {
     path: '/',
@@ -46,20 +36,20 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <Monitor userRole={getUserRole()} />,
+        element: <Monitor />,
         index : true
       },
       {
         path: '/clients/new',
-        element: <Monitor userRole={getUserRole()} />
+        element: <Monitor />
       },
       {
         path : '/monitor-clients',
-        element: <Monitor userRole={getUserRole()} />
+        element: <Monitor />
       },
       {
         path : '/admin-dashboard',
-        element: <AdminDashboard user={JSON.parse(localStorage.getItem('user'))} />
+        element: <AdminDashboard />
       },
       {
         path : '/manager-dashboard',
@@ -67,7 +57,7 @@ const router = createBrowserRouter([
       },
       {
         path : '/operations',
-        element: <Monitor userRole={getUserRole()} />
+        element: <Monitor />
       }
     ]
   }
