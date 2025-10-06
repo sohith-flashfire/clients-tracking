@@ -21,8 +21,8 @@ function App() {
         setUser(userData);
         setCurrentView(userData.role === 'admin' ? 'admin' : 'portal');
         
-        // Navigate based on user role and current location
-        if (location.pathname === '/' || location.pathname === '/login') {
+        // Only redirect from root path
+        if (location.pathname === '/') {
           if (userData.role === 'admin') {
             navigate('/admin-dashboard');
           } else {
