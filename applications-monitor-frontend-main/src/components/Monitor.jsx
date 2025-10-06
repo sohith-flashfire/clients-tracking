@@ -487,10 +487,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
     portfolioMadeDate: '',
     linkedinOptimization: false,
     linkedinOptimizationDate: '',
-    status: 'active',
-    jobStatus: 'still_searching',
-    companyName: '',
-    lastApplicationDate: ''
+    status: 'active'
   });
 
   // Update form data when clientDetails change
@@ -516,10 +513,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
         linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
-        status: clientDetails.status || 'active',
-        jobStatus: clientDetails.jobStatus || 'still_searching',
-        companyName: clientDetails.companyName || '',
-        lastApplicationDate: clientDetails.lastApplicationDate || ''
+        status: clientDetails.status || 'active'
       });
     }
   }, [clientDetails]);
@@ -584,10 +578,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMade: clientDetails.portfolioMade || false,
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
-        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
-        jobStatus: clientDetails.jobStatus || 'still_searching',
-        companyName: clientDetails.companyName || '',
-        lastApplicationDate: clientDetails.lastApplicationDate || ''
+        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || ''
       });
     }
     setIsEditing(false);
@@ -800,68 +791,6 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
           ) : (
             <p className="text-sm text-slate-900 mt-1">
               {clientDetails.name || clientEmail?.split('@')[0]}
-            </p>
-          )}
-        </div>
-        
-        {/* Job Status Field */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Status</label>
-          {isEditing ? (
-            <select
-              name="jobStatus"
-              value={formData.jobStatus}
-              onChange={handleInputChange}
-              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="still_searching">Still Searching</option>
-              <option value="job_done">Job Done</option>
-            </select>
-          ) : (
-            <p className={`text-sm mt-1 font-medium ${
-              clientDetails.jobStatus === 'job_done' ? 'text-green-600' : 'text-orange-600'
-            }`}>
-              {clientDetails.jobStatus === 'job_done' ? 'Job Done' : 'Still Searching'}
-            </p>
-          )}
-        </div>
-        
-        {/* Company Name Field */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Company Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleInputChange}
-              disabled={formData.jobStatus !== 'job_done'}
-              className={`w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                formData.jobStatus !== 'job_done' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-              }`}
-              placeholder={formData.jobStatus !== 'job_done' ? 'Select "Job Done" to enable' : 'Enter company name'}
-            />
-          ) : (
-            <p className="text-sm text-slate-900 mt-1">
-              {clientDetails.companyName || 'Not set'}
-            </p>
-          )}
-        </div>
-        
-        {/* Last Application Date Field */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Application Date</label>
-          {isEditing ? (
-            <input
-              type="date"
-              name="lastApplicationDate"
-              value={formData.lastApplicationDate}
-              onChange={handleInputChange}
-              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          ) : (
-            <p className="text-sm text-slate-900 mt-1">
-              {clientDetails.lastApplicationDate ? new Date(clientDetails.lastApplicationDate).toLocaleDateString('en-GB') : 'Not set'}
             </p>
           )}
         </div>
@@ -1111,12 +1040,6 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 
 // ---------------- Main Component ----------------
 export default function Monitor({ onClose }) {
-
-  // Simple role detection from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userRole = user.role || 'team_lead';
-  
-
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -1615,9 +1538,14 @@ const filteredClients = useMemo(() => {
     return aName.localeCompare(bName);
   });
 
+
+
   return base;
 }, [clientsPostFilter, clientSearchTerm, clientStatusFilter]);
-
+  // ✅ Compute client counts
+const totalClients = Array.isArray(clientsPostFilter) ? clientsPostFilter.length : 0;
+const activeClients = clientsPostFilter.filter(c => c.status?.toLowerCase() === "active").length;
+const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() === "inactive").length;
 
 
 
@@ -1725,7 +1653,6 @@ const filteredClients = useMemo(() => {
           >
             Operations Team
           </button>
-          {userRole === 'admin' && (
           <button
   onClick={() => {
     setShowRegisterClient(true);
@@ -1769,7 +1696,6 @@ const filteredClients = useMemo(() => {
 >
   Manager Dashboard
 </button>
-
 
         </div>
       </div>
@@ -1864,7 +1790,11 @@ const filteredClients = useMemo(() => {
                 </select>
               </div>
             </div>
-
+            <div className="flex flex-wrap items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium">
+    <span className="text-slate-800">Total: <span className="font-bold">{totalClients}</span></span>
+    <span className="text-green-600">Active: <span className="font-bold">{activeClients}</span></span>
+    <span className="text-gray-500">Inactive: <span className="font-bold">{inactiveClients}</span></span>
+  </div>
 
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

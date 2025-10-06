@@ -45,8 +45,6 @@ function App() {
       }
     }
     setLoading(false);
-<<<<<<< HEAD
-=======
   }, []);
 
   // ✅ Redirect admin automatically once (prevents infinite loop)
@@ -76,9 +74,8 @@ function App() {
     }
   }
 }, [user, navigate, location.pathname]);
->>>>>>> 1ed7256 (ccc)
 
-  }, []); // Remove location.pathname and navigate from dependencies
+  // }, []); // Remove location.pathname and navigate from dependencies
 console.log(user) 
   const handleLogin = (userData) => {
     setUser(userData);

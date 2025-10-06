@@ -194,7 +194,7 @@ const getAllJobs = async (req, res)=> {
 const getAllClients = async (req, res) => {
     try {
         const clients = await ClientModel.find().lean();
-        console.log(clients);
+        // console.log(clients);
         res.status(200).json({clients});
     } catch (error) {
         res.status(500).json({error: error.message});
@@ -1011,7 +1011,7 @@ app.get('/api/clients/all', async (req, res) => {
     // Example: '-jobDescription' excludes the JD field
     // You can also exclude multiple: .select('-jobDescription -timeline -notes')
     const clients = await ClientModel.find({}).lean(); // returns plain JS objects (faster)
-    console.log(`Fetched ${clients.length} clients`);
+    // console.log(`Fetched ${clients.length} clients`);
     res.status(200).json({
       success: true,
       count: clients.length,
