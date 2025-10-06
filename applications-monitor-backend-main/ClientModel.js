@@ -167,6 +167,22 @@ export const ClientSchema = new mongoose.Schema({
     required: false,
     default: "active"
   },
+  jobStatus: {
+    type: String,
+    enum: ["still_searching", "job_done"],
+    required: false,
+    default: "still_searching"
+  },
+  companyName: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  lastApplicationDate: {
+    type: String,
+    required: false,
+    default: ""
+  },
   createdAt: {
     type: String,
     default: () => new Date().toLocaleString('en-US', 'Asia/Kolkata'),
