@@ -21,7 +21,7 @@ function App() {
         setUser(userData);
         setCurrentView(userData.role === 'admin' ? 'admin' : 'portal');
         
-        // Only redirect from root path
+        // Only redirect from root path - run once on mount
         if (location.pathname === '/') {
           if (userData.role === 'admin') {
             navigate('/admin-dashboard');
@@ -37,7 +37,7 @@ function App() {
     }
     
     setLoading(false);
-  }, [location.pathname, navigate]);
+  }, []); // Remove location.pathname and navigate from dependencies
 console.log(user)
   const handleLogin = (userData) => {
     setUser(userData);
