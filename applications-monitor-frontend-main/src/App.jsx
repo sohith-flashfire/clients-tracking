@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import Monitor from './components/Monitor';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 
 function App() {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('user');
+    
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('portal'); // 'portal' or 'admin'
   const location = useLocation();
   const navigate = useNavigate();
-
+console.log(user)
   // ✅ Check for logged-in user on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -44,6 +45,38 @@ function App() {
       }
     }
     setLoading(false);
+<<<<<<< HEAD
+=======
+  }, []);
+
+  // ✅ Redirect admin automatically once (prevents infinite loop)
+  // useEffect(() => {
+  //   if (user && user.role === 'admin') {
+  //     // When admin logs in or page refreshes, ensure correct landing page
+  //     if (location.pathname === '/' || location.pathname === '/admin-dashboard') {
+  //       navigate('/monitor-clients', { replace: true });
+  //     }
+  //   } else if (user && user.role !== 'admin') {
+  //     // Team lead default redirect
+  //     if (location.pathname === '/' || location.pathname === '/admin-dashboard') {
+  //       navigate('/monitor', { replace: true });
+  //     }
+  //   }
+  // }, [user, navigate, location.pathname]);
+
+  useEffect(() => {
+  if (user && user.role === 'admin') {
+    // Redirect only if on the root page
+    if (location.pathname === '/') {
+      navigate('/monitor-clients', { replace: true });
+    }
+  } else if (user && user.role == 'team_lead') {
+    if (location.pathname === '/') {
+      navigate('/monitor', { replace: true });
+    }
+  }
+}, [user, navigate, location.pathname]);
+>>>>>>> 1ed7256 (ccc)
 
   }, []); // Remove location.pathname and navigate from dependencies
 console.log(user) 
@@ -121,7 +154,7 @@ console.log(user)
             </div>
           </div>
         </div>
-        <Outlet />
+        <Outlet context={{ user, userRole: user?.role }} />
       </div>
     );
   }
@@ -158,7 +191,7 @@ console.log(user)
           </div>
         </div>
       </div>
-      <Outlet />
+      <Outlet context={{ user, userRole: user?.role }} />
     </div>
   );
 }

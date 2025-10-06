@@ -193,6 +193,7 @@ const getAllJobs = async (req, res)=> {
 const getAllClients = async (req, res) => {
     try {
         const clients = await ClientModel.find().lean();
+        console.log(clients);
         res.status(200).json({clients});
     } catch (error) {
         res.status(500).json({error: error.message});
@@ -1003,6 +1004,27 @@ const getUniqueClientsFromJobs = async (req, res) => {
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/:email', getClientByEmail);
+app.get('/api/clients/all', async (req, res) => {
+  try {
+    // Exclude large fields using .select()
+    // Example: '-jobDescription' excludes the JD field
+    // You can also exclude multiple: .select('-jobDescription -timeline -notes')
+    const clients = await ClientModel.find({}).lean(); // returns plain JS objects (faster)
+    console.log(`Fetched ${clients.length} clients`);
+    res.status(200).json({
+      success: true,
+      count: clients.length,
+      data: clients,
+    });
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching clients',
+    });
+  }
+});
+
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
