@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_BASE || 'http://localhost:10000';
 
@@ -8,7 +8,8 @@ if (!API_BASE) {
   console.error('❌ VITE_BASE environment variable is required');
 }
 
-export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
+export default function AdminDashboard({ user }) {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -153,7 +154,8 @@ export default function AdminDashboard({ user, onLogout, onGoToPortal }) {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    onLogout();
+    navigate('/');
+    window.location.reload(); // Force reload to reset app state
   };
 
   return (
