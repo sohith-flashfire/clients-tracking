@@ -36,16 +36,16 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'team_lead'} />,
+        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />,
         index : true
       },
       {
         path: '/clients/new',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'team_lead'} />
+        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
       },
       {
         path : '/monitor-clients',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'team_lead'} />
+        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
       },
       {
         path : '/admin-dashboard',
@@ -57,7 +57,7 @@ const router = createBrowserRouter([
       },
       {
         path : '/operations',
-        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'team_lead'} />
+        element: <Monitor userRole={JSON.parse(localStorage.getItem('user'))?.role || 'admin'} />
       }
     ]
   }
