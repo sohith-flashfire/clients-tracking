@@ -1076,6 +1076,7 @@ export default function Monitor({ onClose }) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const [clientDetails, setClientDetails] = useState({});
+  const [loadingClientDetails, setLoadingClientDetails] = useState(false);
   
   // Operations-related state
   const [showOperations, setShowOperations] = useState(false);
@@ -1373,6 +1374,48 @@ export default function Monitor({ onClose }) {
     }
   }, [selectedClient]);
 
+  // Effect to refresh client details when status filter changes
+  useEffect(() => {
+    if (clientStatusFilter !== 'all' && clients.length > 0) {
+      // Force refresh client details for all clients when status filter is applied
+      const fetchAllClientDetails = async () => {
+        setLoadingClientDetails(true);
+        const promises = clients.map(async (client) => {
+          if (!clientDetails[client]) {
+            try {
+              const response = await fetch(`${import.meta.env.VITE_BASE || 'https://applications-monitor-api.flashfirejobs.com'}/api/clients/${encodeURIComponent(client)}`);
+              if (response.ok) {
+                const data = await response.json();
+                return { client, details: data.client };
+              }
+            } catch (error) {
+              console.error(`Error fetching details for ${client}:`, error);
+            }
+          }
+          return null;
+        });
+        
+        const results = await Promise.all(promises);
+        const newClientDetails = {};
+        results.forEach(result => {
+          if (result) {
+            newClientDetails[result.client] = result.details;
+          }
+        });
+        
+        if (Object.keys(newClientDetails).length > 0) {
+          setClientDetails(prev => ({
+            ...prev,
+            ...newClientDetails
+          }));
+        }
+        setLoadingClientDetails(false);
+      };
+      
+      fetchAllClientDetails();
+    }
+  }, [clientStatusFilter, clients, clientDetails]);
+
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
     // Get all clients that have jobs from the jobs data
@@ -1502,7 +1545,11 @@ export default function Monitor({ onClose }) {
     if (clientStatusFilter !== 'all') {
       filtered = filtered.filter(client => {
         const clientDetail = clientDetails[client];
-        if (!clientDetail) return false;
+        if (!clientDetail) {
+          // If client details are not loaded yet, don't show any clients
+          // This forces the user to wait for data to load
+          return false;
+        }
         
         const status = clientDetail.status?.toLowerCase();
         return status === clientStatusFilter;
@@ -1511,6 +1558,30 @@ export default function Monitor({ onClose }) {
     
     return filtered;
   }, [clients, clientSearchTerm, clientStatusFilter, clientDetails]);
+
+  // Calculate client counts
+  const clientCounts = useMemo(() => {
+    const total = clients.length;
+    let active = 0;
+    let inactive = 0;
+    
+    clients.forEach(client => {
+      const clientDetail = clientDetails[client];
+      if (clientDetail) {
+        const status = clientDetail.status?.toLowerCase();
+        if (status === 'active') {
+          active++;
+        } else if (status === 'inactive') {
+          inactive++;
+        }
+      } else {
+        // If client details are not loaded yet, assume active (default status)
+        active++;
+      }
+    });
+    
+    return { total, active, inactive };
+  }, [clients, clientDetails]);
 
   // Filter operations based on search term
   const filteredOperations = useMemo(() => {
@@ -1717,6 +1788,26 @@ export default function Monitor({ onClose }) {
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Select a Client</h2>
             </div>
             
+            {/* Client Count Display */}
+            <div className="mb-6 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-slate-700">Client Statistics</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{clientCounts.total}</div>
+                  <div className="text-sm text-blue-800 font-medium">Total Clients</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{clientCounts.active}</div>
+                  <div className="text-sm text-green-800 font-medium">Active Clients</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-600">{clientCounts.inactive}</div>
+                  <div className="text-sm text-gray-800 font-medium">Inactive Clients</div>
+                </div>
+              </div>
+            </div>
             
             {/* Search Bar and Status Filter */}
             <div className="mb-6 flex gap-4">
@@ -1753,21 +1844,53 @@ export default function Monitor({ onClose }) {
             </div>
 
 
-            {/* Client Cards Grid */}
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredClients.map((client) => (
-                <ClientCard 
-                  key={client} 
-                  client={client} 
-                  clientDetails={clientDetails}
-                  onSelect={(client) => {
-                    setSelectedClient(client);
-                    setShowClients(false);
-                    setLeftPanelOpen(true); // Show left panel when client is selected
-                  }} 
-                />
-              ))}
+            {/* Filtered Results Count */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                Showing {filteredClients.length} of {clients.length} clients
+                {clientStatusFilter !== 'all' && (
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                    {clientStatusFilter === 'active' ? 'Active' : 'Inactive'} filter applied
+                  </span>
+                )}
+                {loadingClientDetails && (
+                  <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                    Loading client details...
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Client Cards Grid */}
+            {filteredClients.length === 0 && clientStatusFilter !== 'all' && loadingClientDetails ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center gap-2 text-slate-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Loading client details for filtering...
+                </div>
+              </div>
+            ) : filteredClients.length === 0 && clientStatusFilter !== 'all' ? (
+              <div className="text-center py-8">
+                <div className="text-slate-500">
+                  No {clientStatusFilter} clients found. Try refreshing the page or check if client details are loaded.
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredClients.map((client) => (
+                  <ClientCard 
+                    key={client} 
+                    client={client} 
+                    clientDetails={clientDetails}
+                    onSelect={(client) => {
+                      setSelectedClient(client);
+                      setShowClients(false);
+                      setLeftPanelOpen(true); // Show left panel when client is selected
+                    }} 
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
