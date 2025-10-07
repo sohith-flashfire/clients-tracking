@@ -33,7 +33,7 @@ const RegisterClient = () => {
       try {
         setLoadingManagers(true);
         const API_BASE_URL = import.meta.env.VITE_BASE;
-        const response = await fetch(`${API_BASE_URL}/dashboard-managers`);
+        const response = await fetch(`${API_BASE_URL}/managers`);
         
         if (response.ok) {
           const data = await response.json();
@@ -52,7 +52,7 @@ const RegisterClient = () => {
       try {
         setLoadingClients(true);
         const API_BASE_URL = import.meta.env.VITE_BASE;
-        const response = await fetch(`${API_BASE_URL}/api/clients/all`);
+        const response = await fetch(`${API_BASE_URL}/api/clients`);
         
         if (response.ok) {
           const data = await response.json();
@@ -133,7 +133,7 @@ const RegisterClient = () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_BASE ;
 
-      const res = await fetch(`${API_BASE_URL}/api/clients/register`, {
+      const res = await fetch(`${API_BASE_URL}/api/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
