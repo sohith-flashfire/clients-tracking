@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import ClientDetails from "./ClientDetails";
 import OperationsDetails from "./OperationsDetails";
 import RegisterClient from "./RegisterClient";
-import {Link, useNavigate, useOutletContext} from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_BASE || "https://applications-monitor-api.flashfirejobs.com";
 
@@ -337,98 +337,43 @@ function CompactRow({ job }) {
   );
 }
 
-// function ClientCard({ client, clientDetails, onSelect }) {
-//   const details = typeof client === 'string' ? clientDetails[client] : client;
-//   const email = typeof client === 'string' ? client : client?.email || '';
-//   const displayName = details?.name || email?.split?.('@')?.[0] || '';
-//   const initials = displayName
-//     ?.split(' ')
-//     .map(n => n?.charAt?.(0))
-//     .join('')
-//     ?.toUpperCase() || email?.charAt?.(0)?.toUpperCase() || '?';
-//   const status = details?.status || 'active';
-  
-//   return (
-//     <button
-//       onClick={() => onSelect(client)}
-//       className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left relative"
-//     >
-//       <div className="flex items-center gap-3">
-//         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-//           <span className="text-blue-600 font-semibold text-sm">
-//             {initials}
-//           </span>
-//         </div>
-//         <div className="flex-1 min-w-0">
-//           <div className="font-medium text-slate-900 truncate">
-//             {displayName}
-//           </div>
-//           <div className="text-sm text-slate-500 truncate">
-//             {client}
-//           </div>
-//         </div>
-//         {/* Status indicator */}
-//         <div className={`w-3 h-3 rounded-full ${
-//           status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-//         }`} title={`Status: ${status}`}></div>
-//       </div>
-//     </button>
-//   );
-// }
-
 function ClientCard({ client, clientDetails, onSelect }) {
-  // 🧠 Handle both "string" (email) and "object" forms
-  const details = typeof client === "string" ? clientDetails[client] : client;
-  const email =
-    typeof client === "string" ? client : client?.email || "unknown@email.com";
-
-  const displayName = details?.name || email?.split?.("@")?.[0] || "Unknown";
-  const initials =
-    displayName
-      ?.split(" ")
-      .map((n) => n?.charAt?.(0))
-      .join("")
-      ?.toUpperCase() || "?";
-
-  const status = details?.status || "active";
-  const plan = details?.planType || "No plan";
-
+  const details = clientDetails[client];
+  const displayName = details?.name || client.split('@')[0];
+  const initials = displayName.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || client.charAt(0).toUpperCase();
+  const status = details?.status || 'active';
+  
   return (
     <button
-      onClick={() => onSelect(email)}
+      onClick={() => onSelect(client)}
       className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left relative"
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-          <span className="text-blue-600 font-semibold text-sm">{initials}</span>
+          <span className="text-blue-600 font-semibold text-sm">
+            {initials}
+          </span>
         </div>
-
         <div className="flex-1 min-w-0">
-          {/* ✅ These are strings only */}
           <div className="font-medium text-slate-900 truncate">
             {displayName}
           </div>
-          <div className="text-sm text-slate-500 truncate">{email}</div>
+          <div className="text-sm text-slate-500 truncate">
+            {client}
+          </div>
         </div>
-
         {/* Status indicator */}
-        <div
-          className={`w-3 h-3 rounded-full ${
-            status === "active" ? "bg-green-500" : "bg-gray-400"
-          }`}
-          title={`Status: ${status}`}
-        ></div>
+        <div className={`w-3 h-3 rounded-full ${
+          status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+        }`} title={`Status: ${status}`}></div>
       </div>
-
-      {/* ✅ Plan text */}
-      <div className="text-xs text-slate-500 mt-2 truncate">{plan}</div>
     </button>
   );
 }
 
 function OperationCard({ operation, onSelect, performanceCount = 0, performanceDate }) {
-  const displayName = operation.name || operation?.email?.split('@')[0];
-  const initials = displayName?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || operation.email.charAt(0).toUpperCase();
+  const displayName = operation.name || operation.email.split('@')[0];
+  const initials = displayName.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || operation.email.charAt(0).toUpperCase();
   
   return (
     <button
@@ -487,7 +432,10 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
     portfolioMadeDate: '',
     linkedinOptimization: false,
     linkedinOptimizationDate: '',
-    status: 'active'
+    status: 'active',
+    jobStatus: 'still_searching',
+    companyName: '',
+    lastApplicationDate: ''
   });
 
   // Update form data when clientDetails change
@@ -513,7 +461,10 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
         linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
-        status: clientDetails.status || 'active'
+        status: clientDetails.status || 'active',
+        jobStatus: clientDetails.jobStatus || 'still_searching',
+        companyName: clientDetails.companyName || '',
+        lastApplicationDate: clientDetails.lastApplicationDate || ''
       });
     }
   }, [clientDetails]);
@@ -533,8 +484,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: clientEmail,
-          ...formData,  currentPath: window.location.pathname, // 👈 this captures /monitor-clients or /clients/new
-
+          ...formData
         })
       });
       
@@ -579,7 +529,10 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMade: clientDetails.portfolioMade || false,
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
-        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || ''
+        linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
+        jobStatus: clientDetails.jobStatus || 'still_searching',
+        companyName: clientDetails.companyName || '',
+        lastApplicationDate: clientDetails.lastApplicationDate || ''
       });
     }
     setIsEditing(false);
@@ -760,7 +713,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
           )}
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</label>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Status</label>
           {isEditing ? (
             <select
               name="status"
@@ -772,11 +725,71 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
               <option value="inactive">Inactive</option>
             </select>
           ) : (
-            <p className={`text-sm mt-1 font-medium ${
-              clientDetails.status === 'active' ? 'text-green-600' : 'text-gray-500'
-            }`}>
-              {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
-            </p>
+            <div className="mt-1">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-sm ${
+                clientDetails.status === 'active' 
+                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                  : 'bg-gradient-to-r from-gray-500 to-gray-600'
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  clientDetails.status === 'active' ? 'bg-green-200' : 'bg-gray-200'
+                }`}></div>
+                {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Job Status Field - Added here for visibility */}
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Status</label>
+          {isEditing ? (
+            <select
+              name="jobStatus"
+              value={formData.jobStatus}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="still_searching">Still Searching</option>
+              <option value="job_done">Job Done</option>
+            </select>
+          ) : (
+            <div className="mt-1">
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-sm ${
+                clientDetails.jobStatus === 'job_done' 
+                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                  : 'bg-gradient-to-r from-orange-500 to-orange-600'
+              }`}>
+                <div className={`w-2.5 h-2.5 rounded-full ${
+                  clientDetails.jobStatus === 'job_done' ? 'bg-green-200' : 'bg-orange-200'
+                }`}></div>
+                {clientDetails.jobStatus === 'job_done' ? 'Job Done' : 'Still Searching'}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Company Name Field - Added here for visibility */}
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Company Name</label>
+          {isEditing ? (
+            <input
+              type="text"
+              name="companyName"
+              value={formData.companyName}
+              onChange={handleInputChange}
+              disabled={formData.jobStatus !== 'job_done'}
+              className={`w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 ${
+                formData.jobStatus !== 'job_done' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white hover:shadow-md'
+              }`}
+              placeholder={formData.jobStatus !== 'job_done' ? 'Select "Job Done" to enable' : 'Enter company name'}
+            />
+          ) : (
+            <div className="mt-1">
+              <div className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm text-slate-700 font-medium">
+                {clientDetails.companyName || <span className="text-slate-400 italic">Not set</span>}
+              </div>
+            </div>
           )}
         </div>
         <div>
@@ -791,7 +804,25 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
             />
           ) : (
             <p className="text-sm text-slate-900 mt-1">
-              {clientDetails.name || clientEmail?.split('@')[0]}
+              {clientDetails.name || clientEmail.split('@')[0]}
+            </p>
+          )}
+        </div>
+        
+        {/* Last Application Date Field */}
+        <div>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Last Application Date</label>
+          {isEditing ? (
+            <input
+              type="date"
+              name="lastApplicationDate"
+              value={formData.lastApplicationDate}
+              onChange={handleInputChange}
+              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          ) : (
+            <p className="text-sm text-slate-900 mt-1">
+              {clientDetails.lastApplicationDate ? new Date(clientDetails.lastApplicationDate).toLocaleDateString('en-GB') : 'Not set'}
             </p>
           )}
         </div>
@@ -1041,6 +1072,10 @@ function RightAppliedColumn({ jobs = [], title = "Applied" }) {
 
 // ---------------- Main Component ----------------
 export default function Monitor({ onClose }) {
+  // Simple role detection from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = user.role || 'team_lead';
+  
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -1070,12 +1105,8 @@ export default function Monitor({ onClose }) {
   const [selectedClientFilter, setSelectedClientFilter] = useState("");
   const [availableClients, setAvailableClients] = useState([]);
   const [operationsPerformance, setOperationsPerformance] = useState({});
-  const [performanceDate, setPerformanceDate] = useState(new Date().toISOString()?.split('T')[0]);
-  const { userRole } = useOutletContext();
-  const [clientsLoaded, setClientsLoaded] = useState(false);
- const [clientsPostFilter, setClientsPostFilter] = useState([]);
-
-
+  const [performanceDate, setPerformanceDate] = useState(new Date().toISOString().split('T')[0]);
+  
   // Register Client state
   const [showRegisterClient, setShowRegisterClient] = useState(false);
   const navigate = useNavigate();
@@ -1305,35 +1336,19 @@ export default function Monitor({ onClose }) {
           setClientDetails(cacheRef.current.clients.data);
         } else {
           // Fetch clients from FlashFire Dashboard Backend
-          const FLASHFIRE_API_BASE = import.meta.env.VITE_BASE ;
-          const clientsResponse = await fetch(`${FLASHFIRE_API_BASE}/api/clients`);
-          // after: const clientsResponse = await fetch(`${FLASHFIRE_API_BASE}/api/clients/all`);
-if (clientsResponse.ok) {
-  const clientsData = await clientsResponse.json();
-
-  // -> base array of client emails from the route
-  const validEmail = (s) =>
-    typeof s === "string" &&
-    /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(s);
-
-  const baseEmails = (clientsData?.data || [])
-    .map(c => c?.email)
-    .filter(validEmail);
-
-  setClientsPostFilter(clientsData.clients); // <-- THIS is your base now
-  // console.log(clientsPostFilter);
-  // keep your details map for name/status lookups
-  const clientDetailsMap = {};
-  (clientsData?.data || []).forEach(client => {
-    if (validEmail(client.email)) clientDetailsMap[client.email] = client;
-  });
-  cacheRef.current.clients = { data: clientDetailsMap, ts: now };
-  setClientDetails(clientDetailsMap);
-  setClientsLoaded(true);
-} else {
-  setErr("Failed to fetch client data");
-}
-
+          const FLASHFIRE_API_BASE = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
+          const clientsResponse = await fetch(`${FLASHFIRE_API_BASE}/api/clients/all`);
+          if (clientsResponse.ok) {
+            const clientsData = await clientsResponse.json();
+            const clientDetailsMap = {};
+            clientsData.data.forEach(client => {
+              clientDetailsMap[client.email] = client;
+            });
+            cacheRef.current.clients = { data: clientDetailsMap, ts: now };
+            setClientDetails(clientDetailsMap);
+          } else {
+            setErr("Failed to fetch client data");
+          }
         }
 
         // Fetch operations data
@@ -1489,68 +1504,29 @@ if (clientsResponse.ok) {
   }, [selectedClient, filterDate, clientDetails, jobs]);
 
   // Filter clients based on search term and status
-  // const filteredClients = useMemo(() => {
-  //   let filtered = filteredClient;
+  const filteredClients = useMemo(() => {
+    let filtered = clients;
     
-  //   // Filter by search term
-  //   if (clientSearchTerm) {
-  //     filtered = filtered.filter(client => 
-  //       client.toLowerCase().includes(clientSearchTerm.toLowerCase())
-  //     );
-  //   }
+    // Filter by search term
+    if (clientSearchTerm) {
+      filtered = filtered.filter(client => 
+        client.toLowerCase().includes(clientSearchTerm.toLowerCase())
+      );
+    }
     
-  //   // Filter by status
-  //   if (clientStatusFilter !== 'all') {
-  //     filtered = filtered.filter(client => {
-  //       const clientDetail = clientDetails[client];
-  //       if (!clientDetail) return false;
+    // Filter by status
+    if (clientStatusFilter !== 'all') {
+      filtered = filtered.filter(client => {
+        const clientDetail = clientDetails[client];
+        if (!clientDetail) return false;
         
-  //       const status = clientDetail.status?.toLowerCase();
-  //       return status === clientStatusFilter;
-  //     });
-  //   }
+        const status = clientDetail.status?.toLowerCase();
+        return status === clientStatusFilter;
+      });
+    }
     
-  //   return filtered;
-  // }, [clients, clientSearchTerm, clientStatusFilter, clientDetails]);
-const filteredClients = useMemo(() => {
-  let base = Array.isArray(clientsPostFilter) ? [...clientsPostFilter] : [];
-
-  // Search filter
-  const term = clientSearchTerm.trim().toLowerCase();
-  if (term) {
-    base = base.filter(c =>
-      c.email?.toLowerCase().includes(term) ||
-      c.name?.toLowerCase().includes(term)
-    );
-  }
-
-  // Status filter
-  if (clientStatusFilter !== "all") {
-    const want = clientStatusFilter.toLowerCase();
-    base = base.filter(c =>
-      (c.status?.toLowerCase() || "") === want
-    );
-  }
-
-  // ✅ Safe sort
-  base.sort((a, b) => {
-    const aName = a?.name?.toLowerCase?.() || a?.email?.toLowerCase?.() || "";
-    const bName = b?.name?.toLowerCase?.() || b?.email?.toLowerCase?.() || "";
-    return aName.localeCompare(bName);
-  });
-
-
-
-  return base;
-}, [clientsPostFilter, clientSearchTerm, clientStatusFilter]);
-  // ✅ Compute client counts
-const totalClients = Array.isArray(clientsPostFilter) ? clientsPostFilter.length : 0;
-const activeClients = clientsPostFilter.filter(c => c.status?.toLowerCase() === "active").length;
-const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() === "inactive").length;
-
-
-
-
+    return filtered;
+  }, [clients, clientSearchTerm, clientStatusFilter, clientDetails]);
 
   // Filter operations based on search term
   const filteredOperations = useMemo(() => {
@@ -1654,50 +1630,50 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
           >
             Operations Team
           </button>
+          {userRole === 'admin' && (
           <button
-  onClick={() => {
-    setShowRegisterClient(true);
-    setShowClients(false);
-    setShowOperations(false);
-    setSelectedClient(null);
-    setSelectedOperation(null);
-    setSelectedStatus(null);
-    setFilterDate("");
-    setOperationFilterDate("");
-    setSelectedClientFilter("");
-    setClientStatusFilter("all");
-    setRightSidebarOpen(false);
-    navigate('/clients/new');
-  }}
-  className={`w-full p-3 rounded-lg transition-colors font-medium ${
-    showRegisterClient ? 'bg-orange-700 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
-  } ${JSON.parse(localStorage.getItem('user') || '{}')?.role === 'team_lead' ? 'hidden' : ''}`}
->
-  Register Client
-</button>
-
-<button
-  onClick={() => {
-    setShowRegisterClient(false);
-    setShowClients(false);
-    setShowOperations(false);
-    setSelectedClient(null);
-    setSelectedOperation(null);
-    setSelectedStatus(null);
-    setFilterDate("");
-    setOperationFilterDate("");
-    setSelectedClientFilter("");
-    setClientStatusFilter("all");
-    setRightSidebarOpen(false);
-    navigate('/manager-dashboard');
-  }}
-  className={`w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium ${
-    JSON.parse(localStorage.getItem('user') || '{}')?.role === 'team_lead' ? 'hidden' : ''
-  }`}
->
-  Manager Dashboard
-</button>
-
+            onClick={() => {
+              setShowRegisterClient(true);
+              setShowClients(false);
+              setShowOperations(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setClientStatusFilter("all");
+              setRightSidebarOpen(false);
+              navigate('/clients/new');
+            }}
+            className={`w-full p-3 rounded-lg transition-colors font-medium ${
+              showRegisterClient ? 'bg-orange-700 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
+            }`}
+          >
+            Register Client
+          </button>
+          )}
+          {userRole === 'admin' && (
+          <button
+            onClick={() => {
+              setShowRegisterClient(false);
+              setShowClients(false);
+              setShowOperations(false);
+              setSelectedClient(null);
+              setSelectedOperation(null);
+              setSelectedStatus(null);
+              setFilterDate("");
+              setOperationFilterDate("");
+              setSelectedClientFilter("");
+              setClientStatusFilter("all");
+              setRightSidebarOpen(false);
+              navigate('/manager-dashboard');
+            }}
+            className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            Manager Dashboard
+          </button>
+          )}
         </div>
       </div>
 
@@ -1791,17 +1767,13 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
                 </select>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium">
-    <span className="text-slate-800">Total: <span className="font-bold">{totalClients}</span></span>
-    <span className="text-green-600">Active: <span className="font-bold">{activeClients}</span></span>
-    <span className="text-gray-500">Inactive: <span className="font-bold">{inactiveClients}</span></span>
-  </div>
+
 
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredClients.map((client) => (
                 <ClientCard 
-                  key={client.email} 
+                  key={client} 
                   client={client} 
                   clientDetails={clientDetails}
                   onSelect={(client) => {
