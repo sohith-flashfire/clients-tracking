@@ -1077,6 +1077,7 @@ export default function Monitor({ onClose }) {
   const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const [clientDetails, setClientDetails] = useState({});
   const [loadingClientDetails, setLoadingClientDetails] = useState(false);
+  const [hasFetchedClientDetails, setHasFetchedClientDetails] = useState(false);
   
   // Operations-related state
   const [showOperations, setShowOperations] = useState(false);
@@ -1376,7 +1377,9 @@ export default function Monitor({ onClose }) {
 
   // Effect to refresh client details when status filter changes
   useEffect(() => {
-    if (clientStatusFilter !== 'all' && clients.length > 0) {
+    if (clientStatusFilter === 'all') {
+      setHasFetchedClientDetails(false);
+    } else if (clientStatusFilter !== 'all' && clients.length > 0 && !hasFetchedClientDetails) {
       // Force refresh client details for all clients when status filter is applied
       const fetchAllClientDetails = async () => {
         setLoadingClientDetails(true);
@@ -1410,11 +1413,12 @@ export default function Monitor({ onClose }) {
           }));
         }
         setLoadingClientDetails(false);
+        setHasFetchedClientDetails(true);
       };
       
       fetchAllClientDetails();
     }
-  }, [clientStatusFilter, clients, clientDetails]);
+  }, [clientStatusFilter, clients, hasFetchedClientDetails]);
 
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
