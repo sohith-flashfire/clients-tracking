@@ -46,7 +46,7 @@ const RegisterClient = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setDashboardManagers(data.data);
+            setDashboardManagers(data.managers);
           }
         }
       } catch (error) {
