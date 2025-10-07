@@ -28,6 +28,7 @@ import ReactDOM from 'react-dom/client';
 import RegisterClient from './components/RegisterClient';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import ManagerDashboard from './components/ManagerDashboard.jsx';
+import OperationsDetails from './components/OperationsDetails.jsx';
 
 const router = createBrowserRouter([
   {
@@ -35,12 +36,15 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        path: '/',
         element: <Monitor />,
         index : true
       },
       {
         path: '/clients/new',
+        element: <Monitor />
+      },
+      {
+        path : '/monitor',
         element: <Monitor />
       },
       {

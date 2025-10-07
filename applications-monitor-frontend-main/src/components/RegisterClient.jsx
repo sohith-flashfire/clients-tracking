@@ -30,15 +30,23 @@ const RegisterClient = () => {
   // Fetch dashboard managers and clients on component mount
   useEffect(() => {
     const fetchDashboardManagers = async () => {
+          const token = localStorage.getItem("authToken");
+
       try {
         setLoadingManagers(true);
-        const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
-        const response = await fetch(`${API_BASE_URL}/dashboard-managers`);
+        const API_BASE_URL = import.meta.env.VITE_BASE;
+        const response = await fetch(`${API_BASE_URL}/api/managers`,{
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`, // 👈 here’s the key line
+      },
+    });
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
-            setDashboardManagers(data.data);
+          if (data) {
+            setDashboardManagers(data.managers);
           }
         }
       } catch (error) {
@@ -51,13 +59,13 @@ const RegisterClient = () => {
     const fetchClients = async () => {
       try {
         setLoadingClients(true);
-        const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
-        const response = await fetch(`${API_BASE_URL}/api/clients/all`);
+        const API_BASE_URL = import.meta.env.VITE_BASE;
+        const response = await fetch(`${API_BASE_URL}/api/clients`);
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
-            setClients(data.data);
+          if (data) {
+            setClients(data.clients);
           }
         }
       } catch (error) {
@@ -121,54 +129,96 @@ const RegisterClient = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) return;
 
-    setIsLoading(true);
-    const loadingToast = toastUtils.loading("Creating your account...");
+  setIsLoading(true);
+  const loadingToast = toastUtils.loading("Creating your account...");
 
-    try {
-      const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
+  try {
+    const API_BASE_URL = import.meta.env.VITE_BASE;
 
-      const res = await fetch(`${API_BASE_URL}/api/clients/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+    // 👇 Add only what backend requires, without modifying user inputs
+    const payload = {
+      ...formData,
+      dashboardManagers: formData.dashboardManager,
+      name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+      email: formData.email?.toLowerCase(),
+      password: formData.password,
+      planType: formData.planType,
+      jobDeadline: "",
+      applicationStartDate: "",
+      dashboardInternName: "",
+      dashboardTeamLeadName: formData.dashboardManager || "",
+      onboardingDate: "",
+      whatsappGroupMade: false,
+      whatsappGroupMadeDate: "",
+      dashboardCredentialsShared: false,
+      dashboardCredentialsSharedDate: "",
+      resumeSent: false,
+      resumeSentDate: "",
+      coverLetterSent: false,
+      coverLetterSentDate: "",
+      portfolioMade: false,
+      portfolioMadeDate: "",
+      linkedinOptimization: false,
+      linkedinOptimizationDate: "",
+      gmailCredentials: { email: "", password: "" },
+      dashboardCredentials: { username: "", password: "" },
+      linkedinCredentials: { username: "", password: "" },
+      amountPaid: 0,
+      amountPaidDate: "",
+      modeOfPayment: "paypal",
+      status: "active",
+        currentPath: window.location.pathname, // 👈 this captures /monitor-clients or /clients/new
 
-      const data = await res.json();
-      setResponse(data);
+    };
 
-      if (data?.message === 'User registered successfully') {
-        toastUtils.dismissToast(loadingToast);
-        toastUtils.success("Client registered successfully!");
-        setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', planType: 'Free Trial', dashboardManager: '' });
-        setErrors({});
-        setShowForm(false);
-        // Refresh clients list
-        const clientsResponse = await fetch(`${API_BASE_URL}/api/clients/all`);
-        if (clientsResponse.ok) {
-          const clientsData = await clientsResponse.json();
-          if (clientsData.success) {
-            setClients(clientsData.data);
-          }
-        }
-      } else {
-        toastUtils.dismissToast(loadingToast);
-        toastUtils.error(data?.message || "Registration failed. Please try again.");
-      }
-    } catch (error) {
-      console.log("Registration failed:", error);
+    const res = await fetch(`${API_BASE_URL}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    setResponse(data);
+
+    if (res.ok) {
       toastUtils.dismissToast(loadingToast);
-      toastUtils.error(toastMessages.networkError);
-      setResponse({ message: 'Registration failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+      toastUtils.success("Client registered successfully!");
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        planType: "Free Trial",
+        dashboardManager: "",
+      });
+      setErrors({});
+      setShowForm(false);
+
+      // refresh client list
+      const clientsResponse = await fetch(`${API_BASE_URL}/api/clients`);
+      if (clientsResponse.ok) {
+        const clientsData = await clientsResponse.json();
+        setClients(clientsData.clients || clientsData.data || []);
+      }
+    } else {
+      toastUtils.dismissToast(loadingToast);
+      toastUtils.error(data?.message || "Registration failed. Please try again.");
     }
-  };
+  } catch (error) {
+    console.error("Registration failed:", error);
+    toastUtils.dismissToast(loadingToast);
+    toastUtils.error(toastMessages.networkError);
+    setResponse({ message: "Registration failed. Please try again." });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">

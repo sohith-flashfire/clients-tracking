@@ -22,6 +22,8 @@ import {
   uploadProfilePhoto 
 } from './controllers/ManagerController.js';
 import { upload } from './utils/cloudinary.js';
+import { encrypt } from './utils/CryptoHelper.js';
+import { NewUserModel } from './schema_models/UserModel.js';
 
 
 
@@ -99,19 +101,20 @@ app.use(
     credentials: true,
   })
 );
-// app.options("*", cors());
+app.options(/.*/, cors());
+
 app.use(express.json());
 //Helpers
-function getClientIP(req) {
-  const xff = req.headers["x-forwarded-for"];
-  if (typeof xff === "string" && xff.length > 0) {
-    // may contain multiple IPs: "client, proxy1, proxy2"
-    return xff.split(",")[0].trim();
-  }
-  const ip = req.socket?.remoteAddress || req.ip || "";
-  // strip IPv6 prefix like '::ffff:'
-  return ip.replace(/^::ffff:/, "");
-}
+// function getClientIP(req) {
+//   const xff = req.headers["x-forwarded-for"];
+//   if (typeof xff === "string" && xff.length > 0) {
+//     // may contain multiple IPs: "client, proxy1, proxy2"
+//     return xff.split(",")[0].trim();
+//   }
+//   const ip = req.socket?.remoteAddress || req.ip || "";
+//   // strip IPv6 prefix like '::ffff:'
+//   return ip.replace(/^::ffff:/, "");
+// }
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
@@ -193,6 +196,7 @@ const getAllJobs = async (req, res)=> {
 const getAllClients = async (req, res) => {
     try {
         const clients = await ClientModel.find().lean();
+        // console.log(clients);
         res.status(200).json({clients});
     } catch (error) {
         res.status(500).json({error: error.message});
@@ -216,7 +220,8 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
+      // const referer = req.headers.referer || "";
+        const {currentPath, email,password, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate,dashboardManager, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -225,7 +230,45 @@ const createOrUpdateClient = async (req, res) => {
             executive: 599,
         };
         
-        const clientData = {
+
+if (currentPath.includes("/clients/new")) {
+   const capitalizedPlan = (() => {
+      if (!planType) return "Free Trial";
+      const formatted = planType.trim().toLowerCase();
+      switch (formatted) {
+        case "ignite": return "Ignite";
+        case "professional": return "Professional";
+        case "executive": return "Executive";
+        default: return "Free Trial";
+      }
+    })();
+         const userData = {
+      name,
+      email,
+      passwordHashed: password? encrypt(password): encrypt('flashfire@123'),
+      resumeLink: [],
+      coverLetters: [],
+      optimizedResumes: [],
+      planType: capitalizedPlan, // ✅ matches UserModel enum
+      
+      planLimit: null,
+      userType: "User",
+      dashboardManager,
+      
+    };
+  await NewUserModel.findOneAndUpdate(
+    { email },
+    userData,
+    { upsert: true, new: true, runValidators: true }
+  );
+  const client = await NewUserModel.findOne({email});
+        return res.status(200).json({client});
+}
+
+        
+       
+        else if (currentPath.includes("/monitor-clients")) {
+           const clientData = {
             email: email.toLowerCase(),
             name,
             jobDeadline,
@@ -256,18 +299,164 @@ const createOrUpdateClient = async (req, res) => {
             status,
             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
         };
-
-        const client = await ClientModel.findOneAndUpdate(
+  const client = await ClientModel.findOneAndUpdate(
             { email: email.toLowerCase() },
             clientData,
             { upsert: true, new: true, runValidators: true }
         );
+        return res.status(200).json({client});
+}
+
+        else {
+  console.log("⚠️ Unknown referer:", referer);
+  return res.status(400).json({
+    success: false,
+    message: "Invalid referer or unsupported frontend route",
+  });
+}
         
-        res.status(200).json({client});
+        
     } catch (error) {
+      console.log(error)
         res.status(500).json({error: error.message});
     }
 }
+// const createOrUpdateClient = async (req, res) => {
+//   try {
+//     const {
+//       email,
+//       password,
+//       name,
+//       jobDeadline,
+//       applicationStartDate,
+//       dashboardInternName,
+//       dashboardTeamLeadName,
+//       planType,
+//       onboardingDate,
+//       dashboardManager,
+//       whatsappGroupMade,
+//       whatsappGroupMadeDate,
+//       dashboardCredentialsShared,
+//       dashboardCredentialsSharedDate,
+//       resumeSent,
+//       resumeSentDate,
+//       coverLetterSent,
+//       coverLetterSentDate,
+//       portfolioMade,
+//       portfolioMadeDate,
+//       linkedinOptimization,
+//       linkedinOptimizationDate,
+//       gmailCredentials,
+//       dashboardCredentials,
+//       linkedinCredentials,
+//       amountPaid,
+//       amountPaidDate,
+//       modeOfPayment,
+//       status,
+//     } = req.body;
+
+//     // -------------------- 🧩 Normalize planType for both schemas --------------------
+//     // Capitalized for UserModel, lowercase for ClientModel
+//     const capitalizedPlan = (() => {
+//       if (!planType) return "Free Trial";
+//       const formatted = planType.trim().toLowerCase();
+//       switch (formatted) {
+//         case "ignite": return "Ignite";
+//         case "professional": return "Professional";
+//         case "executive": return "Executive";
+//         default: return "Free Trial";
+//       }
+//     })();
+
+//     const lowercasePlan = (() => {
+//       if (!planType) return "ignite";
+//       const formatted = planType.trim().toLowerCase();
+//       switch (formatted) {
+//         case "ignite": return "ignite";
+//         case "professional": return "professional";
+//         case "executive": return "executive";
+//         default: return "ignite";
+//       }
+//     })();
+
+//     // -------------------- 💵 Set plan price --------------------
+//     const planPrices = {
+//       ignite: 199,
+//       professional: 349,
+//       executive: 599,
+//     };
+
+//     // -------------------- 👤 Create or Update NewUserModel --------------------
+//     const userData = {
+//       name,
+//       email,
+//       passwordHashed: await encrypt(password),
+//       resumeLink: [],
+//       coverLetters: [],
+//       optimizedResumes: [],
+//       planType: capitalizedPlan, // ✅ matches UserModel enum
+      
+//       planLimit: null,
+//       userType: "User",
+//       dashboardManager,
+      
+//     };
+
+//     await NewUserModel.findOneAndUpdate(
+//       { email },
+//       userData,
+//       { upsert: true, new: true, runValidators: true }
+//     );
+
+//     // -------------------- 📋 Create or Update ClientModel --------------------
+//     const clientData = {
+//       email: email.toLowerCase(),
+//       name,
+//       password,
+//       jobDeadline,
+//       applicationStartDate,
+//       dashboardInternName,
+//       dashboardTeamLeadName,
+//       planType: lowercasePlan, // ✅ matches ClientModel enum
+//       planPrice: planPrices[lowercasePlan] || 199,
+//       onboardingDate,
+//       whatsappGroupMade,
+//       whatsappGroupMadeDate,
+//       dashboardCredentialsShared,
+//       dashboardCredentialsSharedDate,
+//       resumeSent,
+//       resumeSentDate,
+//       coverLetterSent,
+//       coverLetterSentDate,
+//       portfolioMade,
+//       portfolioMadeDate,
+//       linkedinOptimization,
+//       linkedinOptimizationDate,
+//       gmailCredentials,
+//       dashboardCredentials,
+//       linkedinCredentials,
+//       amountPaid,
+//       amountPaidDate,
+//       modeOfPayment,
+      
+//       status,
+//       updatedAt: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+//     };
+
+//     const client = await ClientModel.findOneAndUpdate(
+//       { email: email.toLowerCase() },
+//       clientData,
+//       { upsert: true, new: true, runValidators: true }
+//     );
+
+//     res.status(200).json({ client });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 
 // Authentication endpoints
 const login = async (req, res) => {
@@ -544,234 +733,234 @@ const deleteUser = async (req, res) => {
 
 //campaign routes
 
-app.post("/api/track/utm-campaign-lead", async (req, res) => {
-  try {
-    const { clientName, clientEmail, clientPhone, utmSource } = req.body;
+// app.post("/api/track/utm-campaign-lead", async (req, res) => {
+//   try {
+//     const { clientName, clientEmail, clientPhone, utmSource } = req.body;
 
-    if (!utmSource || !clientEmail) {
-      return res.status(400).json({ error: "utmSource and clientEmail are required" });
-    }
+//     if (!utmSource || !clientEmail) {
+//       return res.status(400).json({ error: "utmSource and clientEmail are required" });
+//     }
 
-    // 🔍 Find campaign that has a matching utm_source
-    const campaign = await LinkCampaignUtm.findOne({
-      "utm_source.utm_source": utmSource
-    });
+//     // 🔍 Find campaign that has a matching utm_source
+//     const campaign = await LinkCampaignUtm.findOne({
+//       "utm_source.utm_source": utmSource
+//     });
 
-    if (!campaign) {
-      return res.status(404).json({ message: "No campaign found for this utmSource" });
-    }
+//     if (!campaign) {
+//       return res.status(404).json({ message: "No campaign found for this utmSource" });
+//     }
 
-    // Get the specific UTM object inside the campaign
-    const utmEntry = campaign.utm_source.find(
-      (s) => s.utm_source === utmSource
-    );
+//     // Get the specific UTM object inside the campaign
+//     const utmEntry = campaign.utm_source.find(
+//       (s) => s.utm_source === utmSource
+//     );
 
-    if (!utmEntry) {
-      return res.status(404).json({ message: "UTM not found inside campaign" });
-    }
+//     if (!utmEntry) {
+//       return res.status(404).json({ message: "UTM not found inside campaign" });
+//     }
 
-    // Check if clientEmail already exists
-    const alreadyExists = utmEntry.conversions.some(
-      (c) => c.clientEmail.toLowerCase() === clientEmail.toLowerCase()
-    );
+//     // Check if clientEmail already exists
+//     const alreadyExists = utmEntry.conversions.some(
+//       (c) => c.clientEmail.toLowerCase() === clientEmail.toLowerCase()
+//     );
 
-    if (alreadyExists) {
-      return res.status(200).json({ message: "Client already exists, not added again" });
-    }
+//     if (alreadyExists) {
+//       return res.status(200).json({ message: "Client already exists, not added again" });
+//     }
 
-    // Add new conversion
-    utmEntry.conversions.push({
-      clientName,
-      clientEmail,
-      clientPhone: clientPhone || "Not Provided",
-      bookingDate: new Date()
-    });
+//     // Add new conversion
+//     utmEntry.conversions.push({
+//       clientName,
+//       clientEmail,
+//       clientPhone: clientPhone || "Not Provided",
+//       bookingDate: new Date()
+//     });
 
-    await campaign.save();
+//     await campaign.save();
 
-    return res.status(201).json({
-      message: "✅ Conversion added successfully",
-      conversion: { clientName, clientEmail, clientPhone }
-    });
-  } catch (error) {
-    console.error("❌ Error in /api/track/utm-campaign-lead:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-app.post("/api/campaign/create", CreateCampaign);
+//     return res.status(201).json({
+//       message: "✅ Conversion added successfully",
+//       conversion: { clientName, clientEmail, clientPhone }
+//     });
+//   } catch (error) {
+//     console.error("❌ Error in /api/track/utm-campaign-lead:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+// app.post("/api/campaign/create", CreateCampaign);
 
-app.post("/api/track", async (req, res) => {
-  try {
-    const {
-      ref,
-      userAgent,
-      screenWidth,
-      screenHeight,
-      language,
-      timezone,
-    } = req.body;
+// app.post("/api/track", async (req, res) => {
+//   try {
+//     const {
+//       ref,
+//       userAgent,
+//       screenWidth,
+//       screenHeight,
+//       language,
+//       timezone,
+//     } = req.body;
 
-    if (!ref) {
-      return res.status(400).json({ ok: false, message: "Missing ref code" });
-    }
+//     if (!ref) {
+//       return res.status(400).json({ ok: false, message: "Missing ref code" });
+//     }
 
-    // Extract visitor IP
-    const ip =
-      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-      req.socket.remoteAddress;
+//     // Extract visitor IP
+//     const ip =
+//       req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
+//       req.socket.remoteAddress;
 
-    // Decode ref back into campaign + campaigner
-    const { campaignName, campaignerName } = decode(ref);
+//     // Decode ref back into campaign + campaigner
+//     const { campaignName, campaignerName } = decode(ref);
 
-    // Find campaign
-    const campaign = await LinkCampaignUtm.findOne({
-      campaign_name: campaignName,
-    });
-    if (!campaign) {
-      return res.status(404).json({ ok: false, message: "Campaign not found" });
-    }
+//     // Find campaign
+//     const campaign = await LinkCampaignUtm.findOne({
+//       campaign_name: campaignName,
+//     });
+//     if (!campaign) {
+//       return res.status(404).json({ ok: false, message: "Campaign not found" });
+//     }
 
-    // Find campaigner in campaign
-    const source = campaign.utm_source.find(
-      (s) => s.utm_source.toLowerCase() === campaignerName.toLowerCase()
-    );
-    if (!source) {
-      return res
-        .status(404)
-        .json({ ok: false, message: "Campaigner not found" });
-    }
+//     // Find campaigner in campaign
+//     const source = campaign.utm_source.find(
+//       (s) => s.utm_source.toLowerCase() === campaignerName.toLowerCase()
+//     );
+//     if (!source) {
+//       return res
+//         .status(404)
+//         .json({ ok: false, message: "Campaigner not found" });
+//     }
 
-    /* ------------------- Log Click (detailed) ------------------- */
-    await Click.create({
-      link_code: source.link_code,  // ✅ FIXED
-      utm_source: source.utm_source,
-      utm_campaign: campaignName,
-      ip,
-      timestamp: new Date(),
-      userAgent,
-      screenWidth,
-      screenHeight,
-      language,
-      timezone,
-    });
+//     /* ------------------- Log Click (detailed) ------------------- */
+//     await Click.create({
+//       link_code: source.link_code,  // ✅ FIXED
+//       utm_source: source.utm_source,
+//       utm_campaign: campaignName,
+//       ip,
+//       timestamp: new Date(),
+//       userAgent,
+//       screenWidth,
+//       screenHeight,
+//       language,
+//       timezone,
+//     });
 
-    /* ------------------- Update Aggregates ------------------- */
-    source.total_clicks += 1;
+//     /* ------------------- Update Aggregates ------------------- */
+//     source.total_clicks += 1;
 
-    if (!source.unique_ips.includes(ip)) {
-      source.unique_ips.push(ip);
-      source.unique_clicks = source.unique_ips.length;
-    }
+//     if (!source.unique_ips.includes(ip)) {
+//       source.unique_ips.push(ip);
+//       source.unique_clicks = source.unique_ips.length;
+//     }
 
-    await campaign.save();
+//     await campaign.save();
 
-    return res.json({
-      ok: true,
-      message: "Click tracked successfully",
-      campaignName,
-      campaignerName,
-      utm_source: source.utm_source,
-      link_code: source.link_code,   // ✅ send back too
-      ip,
-      total: source.total_clicks,
-      unique: source.unique_clicks,
-    });
-  } catch (err) {
-    console.error("Error in tracking:", err);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
+//     return res.json({
+//       ok: true,
+//       message: "Click tracked successfully",
+//       campaignName,
+//       campaignerName,
+//       utm_source: source.utm_source,
+//       link_code: source.link_code,   // ✅ send back too
+//       ip,
+//       total: source.total_clicks,
+//       unique: source.unique_clicks,
+//     });
+//   } catch (err) {
+//     console.error("Error in tracking:", err);
+//     return res.status(500).json({ ok: false, error: "server_error" });
+//   }
+// });
 
-// Track and (optionally) redirect
-app.get("/r/:code", async (req, res) => {
-  try {
-    const { code } = req.params;
-    const doc = await LinkCampaignUtm.findOne({ code });
-    if (!doc) return res.status(404).send("Invalid link");
+// // Track and (optionally) redirect
+// app.get("/r/:code", async (req, res) => {
+//   try {
+//     const { code } = req.params;
+//     const doc = await LinkCampaignUtm.findOne({ code });
+//     if (!doc) return res.status(404).send("Invalid link");
 
-    const ip = getClientIP(req);
-    // total clicks increments always
-    doc.totalClicks += 1;
+//     const ip = getClientIP(req);
+//     // total clicks increments always
+//     doc.totalClicks += 1;
 
-    // unique IP logic
-    if (!doc.uniqueIPs.includes(ip)) {
-      doc.uniqueIPs.push(ip);
-      doc.uniqueCount = doc.uniqueIPs.length;
-    }
-    await doc.save();
+//     // unique IP logic
+//     if (!doc.uniqueIPs.includes(ip)) {
+//       doc.uniqueIPs.push(ip);
+//       doc.uniqueCount = doc.uniqueIPs.length;
+//     }
+//     await doc.save();
 
-    // Simple landing message (you can change to a redirect if you want)
-    res.type("html").send(`
-      <html>
-        <head><title>Thanks for visiting</title></head>
-        <body style="font-family: sans-serif; padding: 24px;">
-          <h1>Thanks for visiting via ${doc.campaignerName}'s link</h1>
-          <p>Campaign: <b>${doc.campaignName}</b></p>
-          <p>This IP is counted once. Total unique visitors so far: <b>${doc.uniqueCount}</b></p>
-        </body>
-      </html>
-    `);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
-  }
-});
+//     // Simple landing message (you can change to a redirect if you want)
+//     res.type("html").send(`
+//       <html>
+//         <head><title>Thanks for visiting</title></head>
+//         <body style="font-family: sans-serif; padding: 24px;">
+//           <h1>Thanks for visiting via ${doc.campaignerName}'s link</h1>
+//           <p>Campaign: <b>${doc.campaignName}</b></p>
+//           <p>This IP is counted once. Total unique visitors so far: <b>${doc.uniqueCount}</b></p>
+//         </body>
+//       </html>
+//     `);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Server error");
+//   }
+// });
 
-// Admin report: list all links with counts
-app.get("/api/report", async (_req, res) => {
-  try {
-    const baseUrl = "https://flashfirejobs.com";
+// // Admin report: list all links with counts
+// app.get("/api/report", async (_req, res) => {
+//   try {
+//     const baseUrl = "https://flashfirejobs.com";
 
-    const campaigns = await LinkCampaignUtm.find({}, { __v: 0 })
-      .sort({ createdAt: -1 })
-      .lean();
+//     const campaigns = await LinkCampaignUtm.find({}, { __v: 0 })
+//       .sort({ createdAt: -1 })
+//       .lean();
 
-    const rows = campaigns.map((campaign) => {
-      // calculate campaign-level totals
-      const totalClicks = campaign.utm_source.reduce(
-        (sum, s) => sum + (s.total_clicks || 0),
-        0
-      );
-      const totalUniques = campaign.utm_source.reduce(
-        (sum, s) => sum + (s.unique_clicks || 0),
-        0
-      );
+//     const rows = campaigns.map((campaign) => {
+//       // calculate campaign-level totals
+//       const totalClicks = campaign.utm_source.reduce(
+//         (sum, s) => sum + (s.total_clicks || 0),
+//         0
+//       );
+//       const totalUniques = campaign.utm_source.reduce(
+//         (sum, s) => sum + (s.unique_clicks || 0),
+//         0
+//       );
 
-      return {
-        _id: campaign._id,
-        campaign_name: campaign.campaign_name,
-        link_code: campaign.link_code,
-        createdAt: campaign.createdAt,
-        totalClicks,
-        totalUniques,
-        campaigners: campaign.utm_source.map((s) => ({
-          utm_source: s.utm_source,
-          total_clicks: s.total_clicks,
-          unique_clicks: s.unique_clicks,
-          link: `${baseUrl}?ref=${encode(
-            campaign.campaign_name,
-            s.utm_source
-          )}`,
-          conversions: s.conversions || []   // ✅ include conversions here
-        })),
-      };
-    });
+//       return {
+//         _id: campaign._id,
+//         campaign_name: campaign.campaign_name,
+//         link_code: campaign.link_code,
+//         createdAt: campaign.createdAt,
+//         totalClicks,
+//         totalUniques,
+//         campaigners: campaign.utm_source.map((s) => ({
+//           utm_source: s.utm_source,
+//           total_clicks: s.total_clicks,
+//           unique_clicks: s.unique_clicks,
+//           link: `${baseUrl}?ref=${encode(
+//             campaign.campaign_name,
+//             s.utm_source
+//           )}`,
+//           conversions: s.conversions || []   // ✅ include conversions here
+//         })),
+//       };
+//     });
 
-    res.json({ ok: true, rows });
-  } catch (err) {
-    console.error("Error generating report:", err);
-    res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
+//     res.json({ ok: true, rows });
+//   } catch (err) {
+//     console.error("Error generating report:", err);
+//     res.status(500).json({ ok: false, error: "server_error" });
+//   }
+// });
 
 
 
-// Optional: get report by campaign
-app.get("/api/report/:campaignName", async (req, res) => {
-  const { campaignName } = req.params;
-  const rows = await LinkCampaignUtm.find({ campaignName }, { __v: 0 }).sort({ createdAt: -1 }).lean();
-  res.json({ ok: true, rows });
-});
+// // Optional: get report by campaign
+// app.get("/api/report/:campaignName", async (req, res) => {
+//   const { campaignName } = req.params;
+//   const rows = await LinkCampaignUtm.find({ campaignName }, { __v: 0 }).sort({ createdAt: -1 }).lean();
+//   res.json({ ok: true, rows });
+// });
 
 // Authentication routes
 app.post('/api/auth/verify-credentials', verifyCredentials);
@@ -1003,6 +1192,27 @@ const getUniqueClientsFromJobs = async (req, res) => {
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/:email', getClientByEmail);
+app.get('/api/clients/all', async (req, res) => {
+  try {
+    // Exclude large fields using .select()
+    // Example: '-jobDescription' excludes the JD field
+    // You can also exclude multiple: .select('-jobDescription -timeline -notes')
+    const clients = await ClientModel.find({}).lean(); // returns plain JS objects (faster)
+    // console.log(`Fetched ${clients.length} clients`);
+    res.status(200).json({
+      success: true,
+      count: clients.length,
+      data: clients,
+    });
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching clients',
+    });
+  }
+});
+
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
