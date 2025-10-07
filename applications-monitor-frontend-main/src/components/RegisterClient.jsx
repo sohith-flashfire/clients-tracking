@@ -64,7 +64,7 @@ const RegisterClient = () => {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
+          if (data) {
             setClients(data.clients);
           }
         }
