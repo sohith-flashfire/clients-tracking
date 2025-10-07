@@ -30,10 +30,18 @@ const RegisterClient = () => {
   // Fetch dashboard managers and clients on component mount
   useEffect(() => {
     const fetchDashboardManagers = async () => {
+          const token = localStorage.getItem("authToken");
+
       try {
         setLoadingManagers(true);
         const API_BASE_URL = import.meta.env.VITE_BASE;
-        const response = await fetch(`${API_BASE_URL}/api/managers`);
+        const response = await fetch(`${API_BASE_URL}/api/managers`,{
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`, // 👈 here’s the key line
+      },
+    });
         
         if (response.ok) {
           const data = await response.json();
