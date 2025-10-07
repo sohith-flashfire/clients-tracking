@@ -33,7 +33,7 @@ const RegisterClient = () => {
       try {
         setLoadingManagers(true);
         const API_BASE_URL = import.meta.env.VITE_BASE;
-        const response = await fetch(`${API_BASE_URL}/managers`);
+        const response = await fetch(`${API_BASE_URL}/api/managers`);
         
         if (response.ok) {
           const data = await response.json();
