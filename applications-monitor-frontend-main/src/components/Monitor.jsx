@@ -433,8 +433,6 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
     linkedinOptimization: false,
     linkedinOptimizationDate: '',
     status: 'active',
-    jobStatus: 'still_searching',
-    companyName: '',
     lastApplicationDate: ''
   });
 
@@ -462,8 +460,6 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         linkedinOptimization: clientDetails.linkedinOptimization || false,
         linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
         status: clientDetails.status || 'active',
-        jobStatus: clientDetails.jobStatus || 'still_searching',
-        companyName: clientDetails.companyName || '',
         lastApplicationDate: clientDetails.lastApplicationDate || ''
       });
     }
@@ -530,8 +526,6 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         portfolioMadeDate: clientDetails.portfolioMadeDate || '',
         linkedinOptimization: clientDetails.linkedinOptimization || false,
         linkedinOptimizationDate: clientDetails.linkedinOptimizationDate || '',
-        jobStatus: clientDetails.jobStatus || 'still_searching',
-        companyName: clientDetails.companyName || '',
         lastApplicationDate: clientDetails.lastApplicationDate || ''
       });
     }
@@ -730,59 +724,6 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
             }`}>
               {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
             </p>
-          )}
-        </div>
-        
-        {/* Job Status Field - Added here for visibility */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Job Status</label>
-          {isEditing ? (
-            <select
-              name="jobStatus"
-              value={formData.jobStatus}
-              onChange={handleInputChange}
-              className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="still_searching">Still Searching</option>
-              <option value="job_done">Job Done</option>
-            </select>
-          ) : (
-            <div className="mt-1">
-              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-sm ${
-                clientDetails.jobStatus === 'job_done' 
-                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
-                  : 'bg-gradient-to-r from-orange-500 to-orange-600'
-              }`}>
-                <div className={`w-2.5 h-2.5 rounded-full ${
-                  clientDetails.jobStatus === 'job_done' ? 'bg-green-200' : 'bg-orange-200'
-                }`}></div>
-                {clientDetails.jobStatus === 'job_done' ? 'Job Done' : 'Still Searching'}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        {/* Company Name Field - Added here for visibility */}
-        <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Company Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleInputChange}
-              disabled={formData.jobStatus !== 'job_done'}
-              className={`w-full mt-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 ${
-                formData.jobStatus !== 'job_done' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white hover:shadow-md'
-              }`}
-              placeholder={formData.jobStatus !== 'job_done' ? 'Select "Job Done" to enable' : 'Enter company name'}
-            />
-          ) : (
-            <div className="mt-1">
-              <div className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm text-slate-700 font-medium">
-                {clientDetails.companyName || <span className="text-slate-400 italic">Not set</span>}
-              </div>
-            </div>
           )}
         </div>
         <div>
@@ -1761,41 +1702,6 @@ export default function Monitor({ onClose }) {
               </div>
             </div>
 
-            {/* Client Status Counts */}
-            {(() => {
-              const activeCount = clients.filter(client => {
-                const clientDetail = clientDetails[client];
-                return clientDetail?.status === 'active';
-              }).length;
-              
-              const inactiveCount = clients.filter(client => {
-                const clientDetail = clientDetails[client];
-                return clientDetail?.status === 'inactive';
-              }).length;
-              
-              const totalCount = clients.length;
-              
-              return (
-                <div className="mb-4 flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-slate-700">Active Clients:</span>
-                    <span className="text-sm font-bold text-green-600">{activeCount}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-slate-700">Inactive Clients:</span>
-                    <span className="text-sm font-bold text-gray-600">{inactiveCount}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 ml-auto">
-                    <span className="text-sm font-medium text-slate-700">Total Clients:</span>
-                    <span className="text-sm font-bold text-slate-800">{totalCount}</span>
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
