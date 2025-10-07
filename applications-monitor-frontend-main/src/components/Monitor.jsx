@@ -1373,7 +1373,6 @@ export default function Monitor({ onClose }) {
     }
   }, [selectedClient]);
 
-
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
     // Get all clients that have jobs from the jobs data
@@ -1503,11 +1502,7 @@ export default function Monitor({ onClose }) {
     if (clientStatusFilter !== 'all') {
       filtered = filtered.filter(client => {
         const clientDetail = clientDetails[client];
-        if (!clientDetail) {
-          // If client details are not loaded yet, show all clients
-          // This prevents empty results when data is still loading
-          return true;
-        }
+        if (!clientDetail) return false;
         
         const status = clientDetail.status?.toLowerCase();
         return status === clientStatusFilter;
@@ -1516,30 +1511,6 @@ export default function Monitor({ onClose }) {
     
     return filtered;
   }, [clients, clientSearchTerm, clientStatusFilter, clientDetails]);
-
-  // Calculate client counts
-  const clientCounts = useMemo(() => {
-    const total = clients.length;
-    let active = 0;
-    let inactive = 0;
-    
-    clients.forEach(client => {
-      const clientDetail = clientDetails[client];
-      if (clientDetail) {
-        const status = clientDetail.status?.toLowerCase();
-        if (status === 'active') {
-          active++;
-        } else if (status === 'inactive') {
-          inactive++;
-        }
-      } else {
-        // If client details are not loaded yet, assume active (default status)
-        active++;
-      }
-    });
-    
-    return { total, active, inactive };
-  }, [clients, clientDetails]);
 
   // Filter operations based on search term
   const filteredOperations = useMemo(() => {
@@ -1746,26 +1717,6 @@ export default function Monitor({ onClose }) {
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Select a Client</h2>
             </div>
             
-            {/* Client Count Display */}
-            <div className="mb-6 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-700">Client Statistics</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{clientCounts.total}</div>
-                  <div className="text-sm text-blue-800 font-medium">Total Clients</div>
-                </div>
-                <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{clientCounts.active}</div>
-                  <div className="text-sm text-green-800 font-medium">Active Clients</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-600">{clientCounts.inactive}</div>
-                  <div className="text-sm text-gray-800 font-medium">Inactive Clients</div>
-                </div>
-              </div>
-            </div>
             
             {/* Search Bar and Status Filter */}
             <div className="mb-6 flex gap-4">
@@ -1801,18 +1752,6 @@ export default function Monitor({ onClose }) {
               </div>
             </div>
 
-
-            {/* Filtered Results Count */}
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Showing {filteredClients.length} of {clients.length} clients
-                {clientStatusFilter !== 'all' && (
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                    {clientStatusFilter === 'active' ? 'Active' : 'Inactive'} filter applied
-                  </span>
-                )}
-              </div>
-            </div>
 
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
