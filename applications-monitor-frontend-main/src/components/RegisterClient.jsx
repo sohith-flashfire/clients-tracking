@@ -45,7 +45,7 @@ const RegisterClient = () => {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
+          if (data) {
             setDashboardManagers(data.managers);
           }
         }
@@ -65,7 +65,7 @@ const RegisterClient = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setClients(data.data);
+            setClients(data.clients);
           }
         }
       } catch (error) {
