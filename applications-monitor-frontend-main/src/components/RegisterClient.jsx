@@ -157,11 +157,11 @@ const RegisterClient = () => {
         setErrors({});
         setShowForm(false);
         // Refresh clients list
-        const clientsResponse = await fetch(`${API_BASE_URL}/api/clients/all`);
+        const clientsResponse = await fetch(`${API_BASE_URL}/api/clients`);
         if (clientsResponse.ok) {
           const clientsData = await clientsResponse.json();
           if (clientsData.success) {
-            setClients(clientsData.data);
+            setClients(clientsData.clients);
           }
         }
       } else {
