@@ -713,7 +713,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
           )}
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Status</label>
+          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Status</label>
           {isEditing ? (
             <select
               name="status"
@@ -725,18 +725,11 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
               <option value="inactive">Inactive</option>
             </select>
           ) : (
-            <div className="mt-1">
-              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-sm ${
-                clientDetails.status === 'active' 
-                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
-                  : 'bg-gradient-to-r from-gray-500 to-gray-600'
-              }`}>
-                <div className={`w-2.5 h-2.5 rounded-full ${
-                  clientDetails.status === 'active' ? 'bg-green-200' : 'bg-gray-200'
-                }`}></div>
-                {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
-              </span>
-            </div>
+            <p className={`text-sm mt-1 font-medium ${
+              clientDetails.status === 'active' ? 'text-green-600' : 'text-gray-500'
+            }`}>
+              {clientDetails.status === 'active' ? 'Active' : 'Inactive'}
+            </p>
           )}
         </div>
         
@@ -1768,6 +1761,41 @@ export default function Monitor({ onClose }) {
               </div>
             </div>
 
+            {/* Client Status Counts */}
+            {(() => {
+              const activeCount = clients.filter(client => {
+                const clientDetail = clientDetails[client];
+                return clientDetail?.status === 'active';
+              }).length;
+              
+              const inactiveCount = clients.filter(client => {
+                const clientDetail = clientDetails[client];
+                return clientDetail?.status === 'inactive';
+              }).length;
+              
+              const totalCount = clients.length;
+              
+              return (
+                <div className="mb-4 flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-slate-700">Active Clients:</span>
+                    <span className="text-sm font-bold text-green-600">{activeCount}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-slate-700">Inactive Clients:</span>
+                    <span className="text-sm font-bold text-gray-600">{inactiveCount}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-sm font-medium text-slate-700">Total Clients:</span>
+                    <span className="text-sm font-bold text-slate-800">{totalCount}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Client Cards Grid */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
