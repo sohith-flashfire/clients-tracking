@@ -129,54 +129,96 @@ const RegisterClient = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) return;
 
-    setIsLoading(true);
-    const loadingToast = toastUtils.loading("Creating your account...");
+  setIsLoading(true);
+  const loadingToast = toastUtils.loading("Creating your account...");
 
-    try {
-      const API_BASE_URL = import.meta.env.VITE_BASE ;
+  try {
+    const API_BASE_URL = import.meta.env.VITE_BASE;
 
-      const res = await fetch(`${API_BASE_URL}/api/clients`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+    // 👇 Add only what backend requires, without modifying user inputs
+    const payload = {
+      ...formData,
+      dashboardManagers: formData.dashboardManager,
+      name: `${formData.firstName || ""} ${formData.lastName || ""}`.trim(),
+      email: formData.email?.toLowerCase(),
+      password: formData.password,
+      planType: formData.planType,
+      jobDeadline: "",
+      applicationStartDate: "",
+      dashboardInternName: "",
+      dashboardTeamLeadName: formData.dashboardManager || "",
+      onboardingDate: "",
+      whatsappGroupMade: false,
+      whatsappGroupMadeDate: "",
+      dashboardCredentialsShared: false,
+      dashboardCredentialsSharedDate: "",
+      resumeSent: false,
+      resumeSentDate: "",
+      coverLetterSent: false,
+      coverLetterSentDate: "",
+      portfolioMade: false,
+      portfolioMadeDate: "",
+      linkedinOptimization: false,
+      linkedinOptimizationDate: "",
+      gmailCredentials: { email: "", password: "" },
+      dashboardCredentials: { username: "", password: "" },
+      linkedinCredentials: { username: "", password: "" },
+      amountPaid: 0,
+      amountPaidDate: "",
+      modeOfPayment: "paypal",
+      status: "active",
+        currentPath: window.location.pathname, // 👈 this captures /monitor-clients or /clients/new
 
-      const data = await res.json();
-      setResponse(data);
+    };
 
-      if (data?.message === 'User registered successfully') {
-        toastUtils.dismissToast(loadingToast);
-        toastUtils.success("Client registered successfully!");
-        setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', planType: 'Free Trial', dashboardManager: '' });
-        setErrors({});
-        setShowForm(false);
-        // Refresh clients list
-        const clientsResponse = await fetch(`${API_BASE_URL}/api/clients`);
-        if (clientsResponse.ok) {
-          const clientsData = await clientsResponse.json();
-          if (clientsData.success) {
-            setClients(clientsData.clients);
-          }
-        }
-      } else {
-        toastUtils.dismissToast(loadingToast);
-        toastUtils.error(data?.message || "Registration failed. Please try again.");
-      }
-    } catch (error) {
-      console.log("Registration failed:", error);
+    const res = await fetch(`${API_BASE_URL}/api/clients`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    setResponse(data);
+
+    if (res.ok) {
       toastUtils.dismissToast(loadingToast);
-      toastUtils.error(toastMessages.networkError);
-      setResponse({ message: 'Registration failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+      toastUtils.success("Client registered successfully!");
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        planType: "Free Trial",
+        dashboardManager: "",
+      });
+      setErrors({});
+      setShowForm(false);
+
+      // refresh client list
+      const clientsResponse = await fetch(`${API_BASE_URL}/api/clients`);
+      if (clientsResponse.ok) {
+        const clientsData = await clientsResponse.json();
+        setClients(clientsData.clients || clientsData.data || []);
+      }
+    } else {
+      toastUtils.dismissToast(loadingToast);
+      toastUtils.error(data?.message || "Registration failed. Please try again.");
     }
-  };
+  } catch (error) {
+    console.error("Registration failed:", error);
+    toastUtils.dismissToast(loadingToast);
+    toastUtils.error(toastMessages.networkError);
+    setResponse({ message: "Registration failed. Please try again." });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">

@@ -533,7 +533,8 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: clientEmail,
-          ...formData
+          ...formData,  currentPath: window.location.pathname, // 👈 this captures /monitor-clients or /clients/new
+
         })
       });
       

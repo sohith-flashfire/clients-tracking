@@ -22,6 +22,8 @@ import {
   uploadProfilePhoto 
 } from './controllers/ManagerController.js';
 import { upload } from './utils/cloudinary.js';
+import { encrypt } from './utils/CryptoHelper.js';
+import { NewUserModel } from './schema_models/UserModel.js';
 
 
 
@@ -218,7 +220,8 @@ const getClientByEmail = async (req, res) => {
 
 const createOrUpdateClient = async (req, res) => {
     try {
-        const { email, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
+      // const referer = req.headers.referer || "";
+        const {currentPath, email,password, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate,dashboardManager, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
         
         // Set plan price based on plan type
         const planPrices = {
@@ -227,7 +230,45 @@ const createOrUpdateClient = async (req, res) => {
             executive: 599,
         };
         
-        const clientData = {
+
+if (currentPath.includes("/clients/new")) {
+   const capitalizedPlan = (() => {
+      if (!planType) return "Free Trial";
+      const formatted = planType.trim().toLowerCase();
+      switch (formatted) {
+        case "ignite": return "Ignite";
+        case "professional": return "Professional";
+        case "executive": return "Executive";
+        default: return "Free Trial";
+      }
+    })();
+         const userData = {
+      name,
+      email,
+      passwordHashed: password? encrypt(password): encrypt('flashfire@123'),
+      resumeLink: [],
+      coverLetters: [],
+      optimizedResumes: [],
+      planType: capitalizedPlan, // ✅ matches UserModel enum
+      
+      planLimit: null,
+      userType: "User",
+      dashboardManager,
+      
+    };
+  await NewUserModel.findOneAndUpdate(
+    { email },
+    userData,
+    { upsert: true, new: true, runValidators: true }
+  );
+  const client = await NewUserModel.findOne({email});
+        return res.status(200).json({client});
+}
+
+        
+       
+        else if (currentPath.includes("/monitor-clients")) {
+           const clientData = {
             email: email.toLowerCase(),
             name,
             jobDeadline,
@@ -258,18 +299,164 @@ const createOrUpdateClient = async (req, res) => {
             status,
             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
         };
-
-        const client = await ClientModel.findOneAndUpdate(
+  const client = await ClientModel.findOneAndUpdate(
             { email: email.toLowerCase() },
             clientData,
             { upsert: true, new: true, runValidators: true }
         );
+        return res.status(200).json({client});
+}
+
+        else {
+  console.log("⚠️ Unknown referer:", referer);
+  return res.status(400).json({
+    success: false,
+    message: "Invalid referer or unsupported frontend route",
+  });
+}
         
-        res.status(200).json({client});
+        
     } catch (error) {
+      console.log(error)
         res.status(500).json({error: error.message});
     }
 }
+// const createOrUpdateClient = async (req, res) => {
+//   try {
+//     const {
+//       email,
+//       password,
+//       name,
+//       jobDeadline,
+//       applicationStartDate,
+//       dashboardInternName,
+//       dashboardTeamLeadName,
+//       planType,
+//       onboardingDate,
+//       dashboardManager,
+//       whatsappGroupMade,
+//       whatsappGroupMadeDate,
+//       dashboardCredentialsShared,
+//       dashboardCredentialsSharedDate,
+//       resumeSent,
+//       resumeSentDate,
+//       coverLetterSent,
+//       coverLetterSentDate,
+//       portfolioMade,
+//       portfolioMadeDate,
+//       linkedinOptimization,
+//       linkedinOptimizationDate,
+//       gmailCredentials,
+//       dashboardCredentials,
+//       linkedinCredentials,
+//       amountPaid,
+//       amountPaidDate,
+//       modeOfPayment,
+//       status,
+//     } = req.body;
+
+//     // -------------------- 🧩 Normalize planType for both schemas --------------------
+//     // Capitalized for UserModel, lowercase for ClientModel
+//     const capitalizedPlan = (() => {
+//       if (!planType) return "Free Trial";
+//       const formatted = planType.trim().toLowerCase();
+//       switch (formatted) {
+//         case "ignite": return "Ignite";
+//         case "professional": return "Professional";
+//         case "executive": return "Executive";
+//         default: return "Free Trial";
+//       }
+//     })();
+
+//     const lowercasePlan = (() => {
+//       if (!planType) return "ignite";
+//       const formatted = planType.trim().toLowerCase();
+//       switch (formatted) {
+//         case "ignite": return "ignite";
+//         case "professional": return "professional";
+//         case "executive": return "executive";
+//         default: return "ignite";
+//       }
+//     })();
+
+//     // -------------------- 💵 Set plan price --------------------
+//     const planPrices = {
+//       ignite: 199,
+//       professional: 349,
+//       executive: 599,
+//     };
+
+//     // -------------------- 👤 Create or Update NewUserModel --------------------
+//     const userData = {
+//       name,
+//       email,
+//       passwordHashed: await encrypt(password),
+//       resumeLink: [],
+//       coverLetters: [],
+//       optimizedResumes: [],
+//       planType: capitalizedPlan, // ✅ matches UserModel enum
+      
+//       planLimit: null,
+//       userType: "User",
+//       dashboardManager,
+      
+//     };
+
+//     await NewUserModel.findOneAndUpdate(
+//       { email },
+//       userData,
+//       { upsert: true, new: true, runValidators: true }
+//     );
+
+//     // -------------------- 📋 Create or Update ClientModel --------------------
+//     const clientData = {
+//       email: email.toLowerCase(),
+//       name,
+//       password,
+//       jobDeadline,
+//       applicationStartDate,
+//       dashboardInternName,
+//       dashboardTeamLeadName,
+//       planType: lowercasePlan, // ✅ matches ClientModel enum
+//       planPrice: planPrices[lowercasePlan] || 199,
+//       onboardingDate,
+//       whatsappGroupMade,
+//       whatsappGroupMadeDate,
+//       dashboardCredentialsShared,
+//       dashboardCredentialsSharedDate,
+//       resumeSent,
+//       resumeSentDate,
+//       coverLetterSent,
+//       coverLetterSentDate,
+//       portfolioMade,
+//       portfolioMadeDate,
+//       linkedinOptimization,
+//       linkedinOptimizationDate,
+//       gmailCredentials,
+//       dashboardCredentials,
+//       linkedinCredentials,
+//       amountPaid,
+//       amountPaidDate,
+//       modeOfPayment,
+      
+//       status,
+//       updatedAt: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+//     };
+
+//     const client = await ClientModel.findOneAndUpdate(
+//       { email: email.toLowerCase() },
+//       clientData,
+//       { upsert: true, new: true, runValidators: true }
+//     );
+
+//     res.status(200).json({ client });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 
 // Authentication endpoints
 const login = async (req, res) => {
