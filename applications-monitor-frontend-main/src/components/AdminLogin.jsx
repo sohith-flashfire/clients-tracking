@@ -1,7 +1,7 @@
 // src/components/AdminLogin.jsx
 import React, { useState } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
+const API_BASE_URL = import.meta.env.VITE_BASE ;
 
 export default function AdminLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
