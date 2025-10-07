@@ -1076,8 +1076,6 @@ export default function Monitor({ onClose }) {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const [clientDetails, setClientDetails] = useState({});
-  const [loadingClientDetails, setLoadingClientDetails] = useState(false);
-  const [hasFetchedClientDetails, setHasFetchedClientDetails] = useState(false);
   
   // Operations-related state
   const [showOperations, setShowOperations] = useState(false);
@@ -1375,50 +1373,6 @@ export default function Monitor({ onClose }) {
     }
   }, [selectedClient]);
 
-  // Effect to refresh client details when status filter changes
-  useEffect(() => {
-    if (clientStatusFilter === 'all') {
-      setHasFetchedClientDetails(false);
-    } else if (clientStatusFilter !== 'all' && clients.length > 0 && !hasFetchedClientDetails) {
-      // Force refresh client details for all clients when status filter is applied
-      const fetchAllClientDetails = async () => {
-        setLoadingClientDetails(true);
-        const promises = clients.map(async (client) => {
-          if (!clientDetails[client]) {
-            try {
-              const response = await fetch(`${import.meta.env.VITE_BASE || 'https://applications-monitor-api.flashfirejobs.com'}/api/clients/${encodeURIComponent(client)}`);
-              if (response.ok) {
-                const data = await response.json();
-                return { client, details: data.client };
-              }
-            } catch (error) {
-              console.error(`Error fetching details for ${client}:`, error);
-            }
-          }
-          return null;
-        });
-        
-        const results = await Promise.all(promises);
-        const newClientDetails = {};
-        results.forEach(result => {
-          if (result) {
-            newClientDetails[result.client] = result.details;
-          }
-        });
-        
-        if (Object.keys(newClientDetails).length > 0) {
-          setClientDetails(prev => ({
-            ...prev,
-            ...newClientDetails
-          }));
-        }
-        setLoadingClientDetails(false);
-        setHasFetchedClientDetails(true);
-      };
-      
-      fetchAllClientDetails();
-    }
-  }, [clientStatusFilter, clients, hasFetchedClientDetails]);
 
   // Left column: clients - get clients that actually have jobs
   const clients = useMemo(() => {
@@ -1550,9 +1504,9 @@ export default function Monitor({ onClose }) {
       filtered = filtered.filter(client => {
         const clientDetail = clientDetails[client];
         if (!clientDetail) {
-          // If client details are not loaded yet, don't show any clients
-          // This forces the user to wait for data to load
-          return false;
+          // If client details are not loaded yet, show all clients
+          // This prevents empty results when data is still loading
+          return true;
         }
         
         const status = clientDetail.status?.toLowerCase();
@@ -1857,44 +1811,24 @@ export default function Monitor({ onClose }) {
                     {clientStatusFilter === 'active' ? 'Active' : 'Inactive'} filter applied
                   </span>
                 )}
-                {loadingClientDetails && (
-                  <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                    Loading client details...
-                  </span>
-                )}
               </div>
             </div>
 
             {/* Client Cards Grid */}
-            {filteredClients.length === 0 && clientStatusFilter !== 'all' && loadingClientDetails ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center gap-2 text-slate-600">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  Loading client details for filtering...
-                </div>
-              </div>
-            ) : filteredClients.length === 0 && clientStatusFilter !== 'all' ? (
-              <div className="text-center py-8">
-                <div className="text-slate-500">
-                  No {clientStatusFilter} clients found. Try refreshing the page or check if client details are loaded.
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredClients.map((client) => (
-                  <ClientCard 
-                    key={client} 
-                    client={client} 
-                    clientDetails={clientDetails}
-                    onSelect={(client) => {
-                      setSelectedClient(client);
-                      setShowClients(false);
-                      setLeftPanelOpen(true); // Show left panel when client is selected
-                    }} 
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredClients.map((client) => (
+                <ClientCard 
+                  key={client} 
+                  client={client} 
+                  clientDetails={clientDetails}
+                  onSelect={(client) => {
+                    setSelectedClient(client);
+                    setShowClients(false);
+                    setLeftPanelOpen(true); // Show left panel when client is selected
+                  }} 
+                />
+              ))}
+            </div>
           </div>
         )}
 
