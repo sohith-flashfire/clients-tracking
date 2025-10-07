@@ -32,7 +32,7 @@ const RegisterClient = () => {
     const fetchDashboardManagers = async () => {
       try {
         setLoadingManagers(true);
-        const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
+        const API_BASE_URL = import.meta.env.VITE_BASE || 'https://dashboard-api.flashfirejobs.com';
         const response = await fetch(`${API_BASE_URL}/dashboard-managers`);
         
         if (response.ok) {
@@ -51,7 +51,7 @@ const RegisterClient = () => {
     const fetchClients = async () => {
       try {
         setLoadingClients(true);
-        const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
+        const API_BASE_URL = import.meta.env.VITE_BASE || 'https://dashboard-api.flashfirejobs.com';
         const response = await fetch(`${API_BASE_URL}/api/clients/all`);
         
         if (response.ok) {
@@ -131,7 +131,7 @@ const RegisterClient = () => {
     const loadingToast = toastUtils.loading("Creating your account...");
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_FLASHFIRE_API_BASE_URL || 'https://dashboard-api.flashfirejobs.com';
+      const API_BASE_URL = import.meta.env.VITE_BASE || 'https://dashboard-api.flashfirejobs.com';
 
       const res = await fetch(`${API_BASE_URL}/api/clients/register`, {
         method: 'POST',
