@@ -1012,6 +1012,19 @@ app.get('/api/clients/:email', getClientByEmail);
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 
+//get all the jobdatabase data..
+const getJobsByClient = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const jobs = await JobModel.find({ userID: email }).select('-jobDescription').lean();
+        res.status(200).json({ jobs });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+app.get('/api/clients/:email/jobs', getJobsByClient);
+
 // Manager routes
 app.get('/api/managers', verifyToken, getAllManagers);
 app.get('/api/managers/:id', verifyToken, getManagerById);
