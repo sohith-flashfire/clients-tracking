@@ -12,17 +12,18 @@ if (!API_BASE) {
 }
 
 // ---------------- API ----------------
-async function fetchAllJobs() {
-  const res = await fetch(`${API_BASE}/`, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({"name": "John Doe"}),
-  });
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return Array.isArray(data.jobDB) ? data.jobDB : [];
+async function fetchJobsForClient(email) {
+    const res = await fetch(`${API_BASE}/api/clients/${encodeURIComponent(email)}/jobs`);
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return Array.isArray(data.jobs) ? data.jobs : [];
+}
+
+async function fetchAllClients() {
+    const res = await fetch(`${API_BASE}/api/clients`);
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return Array.isArray(data.clients) ? data.clients : [];
 }
 
 // ---------------- Helpers ----------------
@@ -1061,6 +1062,7 @@ export default function Monitor({ onClose }) {
   const userRole = user.role || 'team_lead';
   
   const [jobs, setJobs] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [selectedClient, setSelectedClient] = useState(null);
@@ -1122,8 +1124,8 @@ export default function Monitor({ onClose }) {
   }, []);
   // In-memory caches (TTL-based) for jobs and clients
   const cacheRef = useRef({
-    jobs: { data: null, ts: 0 },
     clients: { data: null, ts: 0 },
+    jobsByClient: {}, // { [email]: { data, ts } }
     jobDescriptions: {} // { [id]: { text, ts } }
   });
   const CACHE_TTL_MS = 60 * 1000; // 1 minute TTL
@@ -1306,14 +1308,10 @@ export default function Monitor({ onClose }) {
         }
 
         const now = Date.now();
-        // Jobs: serve from cache if fresh
-        if (cacheRef.current.jobs.data && now - cacheRef.current.jobs.ts < CACHE_TTL_MS) {
-          setJobs(cacheRef.current.jobs.data);
-        } else {
-          const data = await fetchAllJobs();
-          cacheRef.current.jobs = { data, ts: now };
-          setJobs(data);
-        }
+
+        // Fetch all clients initially
+        const clientData = await fetchAllClients();
+        setClients(clientData.map(c => c.email));
 
         // Clients: serve from cache if fresh
         if (cacheRef.current.clients.data && now - cacheRef.current.clients.ts < CACHE_TTL_MS) {
@@ -1359,9 +1357,29 @@ export default function Monitor({ onClose }) {
     }
   }, [performanceDate, operations]);
 
-  // Effect to fetch client details when selectedClient changes
+  // Effect to fetch client details and jobs when selectedClient changes
   useEffect(() => {
     if (selectedClient) {
+      // Fetch jobs for the selected client
+      (async () => {
+        const now = Date.now();
+        const cached = cacheRef.current.jobsByClient[selectedClient];
+
+        if (cached && now - cached.ts < CACHE_TTL_MS) {
+          setJobs(cached.data);
+        } else {
+          try {
+            // Consider a separate loading state for jobs if needed
+            const data = await fetchJobsForClient(selectedClient);
+            cacheRef.current.jobsByClient[selectedClient] = { data, ts: now };
+            setJobs(data);
+          } catch (e) {
+            setErr(e.message || "Failed to fetch jobs for client");
+          }
+        }
+      })();
+
+      // Fetch client details
       fetchClientDetails(selectedClient).then(client => {
         if (client) {
           setClientDetails(prev => ({
@@ -1370,42 +1388,19 @@ export default function Monitor({ onClose }) {
           }));
         }
       });
+    } else {
+      setJobs([]); // Clear jobs when no client is selected
     }
   }, [selectedClient]);
 
-  // Left column: clients - get clients that actually have jobs
-  const clients = useMemo(() => {
-    // Get all clients that have jobs from the jobs data
-    const clientsWithJobs = new Set();
-    jobs.forEach((j) => {
-      // Only add valid email addresses as clients
-      if (j.userID && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(j.userID)) {
-        clientsWithJobs.add(j.userID);
-      }
-    });
-    const clientsList = [...clientsWithJobs];
-    return clientsList;
-  }, [jobs]);
-
   // Removed auto-selection - user will manually select from client cards
 
-  const clientJobs = useMemo(() => {
-    if (!selectedClient) return [];
-    const filteredJobs = jobs.filter((j) => {
-      // Only include jobs with valid userID and matching selected client
-      return j.userID === selectedClient && 
-             j.userID && 
-             /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(j.userID);
-    });
-    return filteredJobs;
-  }, [jobs, selectedClient]);
-
-  const statusCounts = useMemo(() => getStatusCounts(clientJobs), [clientJobs]);
+  const statusCounts = useMemo(() => getStatusCounts(jobs), [jobs]);
 
   // Applied jobs for selected client (used in both middle & right)
   const appliedJobs = useMemo(() => {
-    return clientJobs.filter(isAppliedNow).sort(sortByUpdatedDesc);
-  }, [clientJobs]);
+    return jobs.filter(isAppliedNow).sort(sortByUpdatedDesc);
+  }, [jobs]);
 
   // Middle column: date-filtered applied jobs (for the selected date)
   const dateFilteredJobs = useMemo(() => {
@@ -1525,7 +1520,7 @@ export default function Monitor({ onClose }) {
   const statusFilteredJobs = useMemo(() => {
     if (!selectedStatus) return [];
     try {
-      return clientJobs.filter((job) => {
+      return jobs.filter((job) => {
         const current = String(job.currentStatus || "").toLowerCase();
         const last = getLastTimelineStatus(job.timeline || []);
         const status = current || last || "unknown";
@@ -1536,7 +1531,7 @@ export default function Monitor({ onClose }) {
       console.error('Error filtering jobs by status:', error);
       return [];
     }
-  }, [clientJobs, selectedStatus]);
+  }, [jobs, selectedStatus]);
 
   const handleCloseClientDetails = () => {
     setShowClientDetails(false);
