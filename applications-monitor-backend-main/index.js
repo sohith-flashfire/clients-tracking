@@ -231,7 +231,7 @@ const createOrUpdateClient = async (req, res) => {
         };
         
 
-if (currentPath?.includes("/clients/new")) {
+if (currentPath.includes("/clients/new")) {
    const capitalizedPlan = (() => {
       if (!planType) return "Free Trial";
       const formatted = planType.trim().toLowerCase();
@@ -267,7 +267,7 @@ if (currentPath?.includes("/clients/new")) {
 
         
        
-        else {//if (currentPath.includes("/monitor-clients")) {
+        else if (currentPath.includes("/monitor-clients")) {
            const clientData = {
             email: email.toLowerCase(),
             name,
@@ -307,13 +307,13 @@ if (currentPath?.includes("/clients/new")) {
         return res.status(200).json({client});
 }
 
-//         else {
-//   console.log("⚠️ Unknown referer:", referer);
-//   return res.status(400).json({
-//     success: false,
-//     message: "Invalid referer or unsupported frontend route",
-//   });
-// }
+        else {
+  console.log("⚠️ Unknown referer:", referer);
+  return res.status(400).json({
+    success: false,
+    message: "Invalid referer or unsupported frontend route",
+  });
+}
         
         
     } catch (error) {
@@ -1375,4 +1375,3 @@ app.get('/api/operations/:email/available-clients', getAvailableClients);
 app.get('/api/clients/:email', getClientDetails);
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
-
