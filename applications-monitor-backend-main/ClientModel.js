@@ -15,23 +15,23 @@ export const ClientSchema = new mongoose.Schema({
   },
   jobDeadline: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   applicationStartDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   dashboardInternName: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   dashboardTeamLeadName: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   planType: {
     type: String,
@@ -46,68 +46,68 @@ export const ClientSchema = new mongoose.Schema({
   },
   onboardingDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: Date.now()
   },
   whatsappGroupMade: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   whatsappGroupMadeDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   dashboardCredentialsShared: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   dashboardCredentialsSharedDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   resumeSent: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   resumeSentDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   coverLetterSent: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   coverLetterSentDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   portfolioMade: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   portfolioMadeDate: {
     type: String,
     required: false,
-    default: ""
+    default: ' '
   },
   linkedinOptimization: {
     type: Boolean,
-    required: false,
+    required: true,
     default: false
   },
   linkedinOptimizationDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   gmailCredentials: {
     email: {
@@ -147,41 +147,41 @@ export const ClientSchema = new mongoose.Schema({
   },
   amountPaid: {
     type: Number,
-    required: false,
+    required: true,
     default: 0
   },
   amountPaidDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   modeOfPayment: {
     type: String,
     enum: ["paypal", "wire_transfer", "inr"],
-    required: false,
+    required: true,
     default: "paypal"
   },
   status: {
     type: String,
     enum: ["active", "inactive"],
-    required: false,
+    required: true,
     default: "active"
   },
   jobStatus: {
     type: String,
     enum: ["still_searching", "job_done"],
-    required: false,
+    required: true,
     default: "still_searching"
   },
   companyName: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   lastApplicationDate: {
     type: String,
-    required: false,
-    default: ""
+    required: true,
+    default: ' '
   },
   createdAt: {
     type: String,

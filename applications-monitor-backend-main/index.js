@@ -218,109 +218,335 @@ const getClientByEmail = async (req, res) => {
 
 // (Auth routes removed)
 
-const createOrUpdateClient = async (req, res) => {
-    try {
-      // const referer = req.headers.referer || "";
-        const {currentPath, email,password, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate,dashboardManager, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
-        
-        // Set plan price based on plan type
-        const planPrices = {
-            ignite: 199,
-            professional: 349,
-            executive: 599,
-        };
-        
-
-if (currentPath.includes("/clients/new")) {
-   const capitalizedPlan = (() => {
-      if (!planType) return "Free Trial";
-      const formatted = planType.trim().toLowerCase();
-      switch (formatted) {
-        case "ignite": return "Ignite";
-        case "professional": return "Professional";
-        case "executive": return "Executive";
-        default: return "Free Trial";
-      }
-    })();
-         const userData = {
-      name,
+export const createOrUpdateClient = async (req, res) => {
+  try {
+    const {
+      currentPath,
       email,
-      passwordHashed: password? encrypt(password): encrypt('flashfire@123'),
-      resumeLink: [],
-      coverLetters: [],
-      optimizedResumes: [],
-      planType: capitalizedPlan, // ✅ matches UserModel enum
-      
-      planLimit: null,
+      password,
+      name,
+      jobDeadline,
+      applicationStartDate,
+      dashboardInternName,
+      dashboardTeamLeadName,
+      planType,
+      onboardingDate,
+      whatsappGroupMade,
+      whatsappGroupMadeDate,
+      dashboardCredentialsShared,
+      dashboardCredentialsSharedDate,
+      resumeSent,
+      resumeSentDate,
+      coverLetterSent,
+      coverLetterSentDate,
+      portfolioMade,
+      portfolioMadeDate,
+      linkedinOptimization,
+      linkedinOptimizationDate,
+      gmailCredentials,
+      dashboardCredentials,
+      linkedinCredentials,
+      amountPaid,
+      amountPaidDate,
+      modeOfPayment,
+      status,
+    } = req.body;
+
+    const emailLower = email.toLowerCase();
+    const planPrices = { ignite: 199, professional: 349, executive: 599 };
+    const dashboardManager = dashboardTeamLeadName;
+
+    const capitalizedPlan =
+      planType?.trim()?.toLowerCase() === "ignite"
+        ? "Ignite"
+        : planType?.trim()?.toLowerCase() === "professional"
+        ? "Professional"
+        : planType?.trim()?.toLowerCase() === "executive"
+        ? "Executive"
+        : "Free Trial";
+
+    const userData = {
+      name,
+      email: emailLower,
+      passwordHashed: password ? encrypt(password) : encrypt("flashfire@123"),
+      planType: capitalizedPlan,
       userType: "User",
       dashboardManager,
-      
     };
-  await NewUserModel.findOneAndUpdate(
-    { email },
-    userData,
-    { upsert: true, new: true, runValidators: true }
-  );
-  const client = await NewUserModel.findOne({email});
-        return res.status(200).json({client});
-}
 
+    // ✅ if it's a "new client" path
+    if (currentPath?.includes("/clients/new")) {
+      const existingUser = await NewUserModel.findOne({ email: emailLower });
+
+      // CREATE new user + client tracking if not exists
+      if (!existingUser) {
+        const newUser = await NewUserModel.create(userData);
+
+        const fullClientData = {
+          email: emailLower,
+          name,
+          jobDeadline: jobDeadline || " ",
+          applicationStartDate: applicationStartDate || " ",
+          dashboardInternName: dashboardInternName || " ",
+          dashboardTeamLeadName,
+          planType: planType?.toLowerCase() || "ignite",
+          planPrice: planPrices[planType?.toLowerCase()] || 199,
+          onboardingDate: onboardingDate || new Date().toISOString(),
+          whatsappGroupMade: whatsappGroupMade ?? false,
+          whatsappGroupMadeDate: whatsappGroupMadeDate || " ",
+          dashboardCredentialsShared: dashboardCredentialsShared ?? false,
+          dashboardCredentialsSharedDate: dashboardCredentialsSharedDate || " ",
+          resumeSent: resumeSent ?? false,
+          resumeSentDate: resumeSentDate || " ",
+          coverLetterSent: coverLetterSent ?? false,
+          coverLetterSentDate: coverLetterSentDate || " ",
+          portfolioMade: portfolioMade ?? false,
+          portfolioMadeDate: portfolioMadeDate || " ",
+          linkedinOptimization: linkedinOptimization ?? false,
+          linkedinOptimizationDate: linkedinOptimizationDate || " ",
+          gmailCredentials: gmailCredentials || { email: "", password: "" },
+          dashboardCredentials: dashboardCredentials || {
+            username: "",
+            password: "",
+          },
+          linkedinCredentials: linkedinCredentials || {
+            username: "",
+            password: "",
+          },
+          amountPaid: amountPaid || 0,
+          amountPaidDate: amountPaidDate || " ",
+          modeOfPayment: modeOfPayment || "paypal",
+          status: status || "active",
+          updatedAt: new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        };
+
+        const newTracking = await ClientModel.create(fullClientData);
+        return res.status(200).json({
+          message: "✅ New client created successfully",
+          newUser,
+          newTracking,
+        });
+      }
+
+      // 🔄 if exists → partial update only
+      await NewUserModel.updateOne({ email: emailLower }, { $set: userData });
+      await ClientModel.updateOne(
+        { email: emailLower },
+        { $set: {dashboardTeamLeadName : dashboardManager} },
+        { runValidators: false }
+      );
+      return res.status(200).json({
+        message: "🟢 Existing client updated (partial update)",
+      });
+    }
+
+    // ✅ if not /clients/new → partial update always
+    await ClientModel.updateOne(
+      { email: emailLower },
+      { $set: req.body },
+      { runValidators: false }
+    );
+    await NewUserModel.updateOne(
+      { email: emailLower },
+      { $set: { name ,planType: capitalizedPlan, dashboardManager: dashboardTeamLeadName } },
+      { runValidators: false }
+    );
+const updatedClientsTracking = await ClientModel.findOne({ email: emailLower }).lean();
+
+
+    return res
+      .status(200)
+      .json({ message: "🔄 Client fields updated successfully",updatedClientsTracking });
+  } catch (error) {
+    console.error("❌ Error in createOrUpdateClient:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+// const createOrUpdateClient = async (req, res) => {
+//     try {
+//       // const referer = req.headers.referer || "";
+//         let {currentPath, email,password, name, jobDeadline, applicationStartDate, dashboardInternName, dashboardTeamLeadName, planType, onboardingDate, whatsappGroupMade, whatsappGroupMadeDate, dashboardCredentialsShared, dashboardCredentialsSharedDate, resumeSent, resumeSentDate,dashboardManager, coverLetterSent, coverLetterSentDate, portfolioMade, portfolioMadeDate, linkedinOptimization, linkedinOptimizationDate, gmailCredentials, dashboardCredentials, linkedinCredentials, amountPaid, amountPaidDate, modeOfPayment, status } = req.body;
+//         dashboardManager = dashboardTeamLeadName;
+//         // Set plan price based on plan type
+//         const planPrices = {
+//             ignite: 199,
+//             professional: 349,
+//             executive: 599,
+//         };
+//       const capitalizedPlan = (() => {
+//       if (!planType) return "Free Trial";
+//       const formatted = planType.trim().toLowerCase();
+//       switch (formatted) {
+//         case "ignite": return "Ignite";
+//         case "professional": return "Professional";
+//         case "executive": return "Executive";
+//         default: return "Free Trial";
+//       }
+//     })();
+//       const clientData = {
+//             email: email.toLowerCase(),
+//             name,
+//             jobDeadline,
+//             applicationStartDate,
+//             dashboardInternName,
+//             dashboardTeamLeadName,
+//             planType,
+//             planPrice: planPrices[planType] || 199,
+//             onboardingDate,
+//             whatsappGroupMade,
+//             whatsappGroupMadeDate,
+//             dashboardCredentialsShared,
+//             dashboardCredentialsSharedDate,
+//             resumeSent,
+//             resumeSentDate,
+//             coverLetterSent,
+//             coverLetterSentDate,
+//             portfolioMade,
+//             portfolioMadeDate,
+//             linkedinOptimization,
+//             linkedinOptimizationDate,
+//             gmailCredentials,
+//             dashboardCredentials,
+//             linkedinCredentials,
+//             amountPaid,
+//             amountPaidDate,
+//             modeOfPayment,
+//             status,
+//             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+//         };
+// const userData = {
+//       name,
+//       email,
+//       passwordHashed: password? encrypt(password): encrypt('flashfire@123'),
+//       planType: capitalizedPlan, // ✅ matches UserModel enum
+//       userType: "User",
+//       dashboardManager,
+      
+//     };
+        
+
+// if (currentPath.includes("/clients/new")) {
+//   // const capitalizedPlan = (() => {
+//   //
+//    //   if (!planType) return "Free Trial";
+//      // const formatted = planType.trim().toLowerCase();
+//    //   switch (formatted) {
+//    //     case "ignite": return "Ignite";
+//        // case "professional": return "Professional";
+//         //case "executive": return "Executive";
+//        // default: return "Free Trial";
+//      // }
+//    // })();
+//   //       const userData = {
+// //      name,
+//     //  email,
+//   //    passwordHashed: password? encrypt(password): encrypt('flashfire@123'),
+// //      planType: capitalizedPlan, // ✅ matches UserModel enum
+      
+//   //    planLimit: null,
+// //      userType: "User",
+//     //  dashboardManager,
+      
+//   //  };
+//   const checkExistanceinNewUser = await NewUserModel.findOne({email});
+//   if(!checkExistanceinNewUser){
+//    const client = await NewUserModel.findOneAndUpdate(
+//       {email },
+//       userData,
+//       { upsert: true, new: true, runValidators: true }
+//    );
+//  // const client = await NewUserModel.findOne({email});
+//     const clientTracking = await ClientModel.findOneAndUpdate(
+//       {email},
+//       {clientData},
+//       {upsert: true, new : true, runValidators : true}
+//     );
+//     return res.status(200).json({message : 'new client created',client, clientTracking});
+// }
+// else{
+//   if(req?.body?.dashboardManager){
+//     const client = await NewUserModel.findOneAndUpdate(
+//       {email},
+//       userData,
+//       {upsert : true, new : true, runValidators : true}
+
+//     );
+//     const clientTracking = await UserModel.findOneAndUpdate(
+//       {email},
+//       {dashboardTeamLeadName : dashboardManager},
+//       {upsert : true, runValidators : true , new : true}
+//     );
+//     return res.status(200).json({message : `client details updated in [UserModel] && [DashBoardTracking]`});
+//   }
+  
+// }
+// }
         
        
-        else if (currentPath.includes("/monitor-clients")) {
-           const clientData = {
-            email: email.toLowerCase(),
-            name,
-            jobDeadline,
-            applicationStartDate,
-            dashboardInternName,
-            dashboardTeamLeadName,
-            planType,
-            planPrice: planPrices[planType] || 199,
-            onboardingDate,
-            whatsappGroupMade,
-            whatsappGroupMadeDate,
-            dashboardCredentialsShared,
-            dashboardCredentialsSharedDate,
-            resumeSent,
-            resumeSentDate,
-            coverLetterSent,
-            coverLetterSentDate,
-            portfolioMade,
-            portfolioMadeDate,
-            linkedinOptimization,
-            linkedinOptimizationDate,
-            gmailCredentials,
-            dashboardCredentials,
-            linkedinCredentials,
-            amountPaid,
-            amountPaidDate,
-            modeOfPayment,
-            status,
-            updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
-        };
-  const client = await ClientModel.findOneAndUpdate(
-            { email: email.toLowerCase() },
-            clientData,
-            { upsert: true, new: true, runValidators: true }
-        );
-        return res.status(200).json({client});
-}
+//         else {//if (currentPath.includes("/monitor-clients")) {
+//            const clientData = {
+//             email: email.toLowerCase(),
+//             name,
+//             jobDeadline,
+//             applicationStartDate,
+//             dashboardInternName,
+//             dashboardTeamLeadName,
+//             planType,
+//             planPrice: planPrices[planType] || 199,
+//             onboardingDate,
+//             whatsappGroupMade,
+//             whatsappGroupMadeDate,
+//             dashboardCredentialsShared,
+//             dashboardCredentialsSharedDate,
+//             resumeSent,
+//             resumeSentDate,
+//             coverLetterSent,
+//             coverLetterSentDate,
+//             portfolioMade,
+//             portfolioMadeDate,
+//             linkedinOptimization,
+//             linkedinOptimizationDate,
+//             gmailCredentials,
+//             dashboardCredentials,
+//             linkedinCredentials,
+//             amountPaid,
+//             amountPaidDate,
+//             modeOfPayment,
+//             status,
+//             updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+//         };
+        
+//   const clientTracking = await ClientModel.findOneAndUpdate(
+//             { email: email.toLowerCase() },
+//             clientData,
+//             { upsert: true, new: true, runValidators: true }
+//         );
+//        // return res.status(200).json({client});
+//   const client = await NewUserModel.findOneAndUpdate(
+//             {email},
+//             {name, email, dashBoardManager : dashboardTeamLeadName, planType},
+//             {upsert : true, new : true , runValidators : true}
+//       );
+//           res.status(200).json({message : `user details updated for client : ${ email} in [UserModel] && [DashboardTracking] `});
+// }
 
-        else {
-  console.log("⚠️ Unknown referer:", referer);
-  return res.status(400).json({
-    success: false,
-    message: "Invalid referer or unsupported frontend route",
-  });
-}
+// //         else {
+// // //  console.log("⚠️ Unknown referer:", referer);
+// // console.log(error)
+// //   return res.status(400).json({
+// //     success: false,
+// //     message: "Invalid referer or unsupported frontend route",
+// //   });
+// // }
         
         
-    } catch (error) {
-      console.log(error)
-        res.status(500).json({error: error.message});
-    }
-}
+//     } catch (error) {
+//       console.log(error)
+//         res.status(500).json({error: error.message});
+//     }
+// }
 // const createOrUpdateClient = async (req, res) => {
 //   try {
 //     const {
