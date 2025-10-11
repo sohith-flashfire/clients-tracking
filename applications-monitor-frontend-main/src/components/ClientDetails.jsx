@@ -178,7 +178,7 @@ const ClientDetails = ({ clientEmail, onClose, userRole = 'admin' }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setClient(data.client);
+        setClient(data?.updatedClientsTracking);
         setIsEditing(false);
         alert('Client details saved successfully!');
       } else {
