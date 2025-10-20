@@ -216,6 +216,106 @@ const getClientByEmail = async (req, res) => {
     }
 }
 
+// Get client onboarding statistics grouped by month
+const getClientStats = async (req, res) => {
+    try {
+        // Get current date and calculate 12 months ago
+        const now = new Date();
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setMonth(now.getMonth() - 11);
+        twelveMonthsAgo.setDate(1); // Start from first day of the month
+        twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+        // Aggregate clients by month for the last 12 months using NewUserModel
+        const monthlyStats = await NewUserModel.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: twelveMonthsAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id.year": 1, "_id.month": 1 }
+            }
+        ]);
+
+        // Get total clients
+        const totalClients = await NewUserModel.countDocuments();
+
+        // Get current month stats
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const currentMonthCount = monthlyStats.find(
+            stat => stat._id.month === currentMonth && stat._id.year === currentYear
+        )?.count || 0;
+
+        // Get last month stats
+        const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+        const lastMonthCount = monthlyStats.find(
+            stat => stat._id.month === lastMonth && stat._id.year === lastMonthYear
+        )?.count || 0;
+
+        // Calculate growth percentage
+        const growthPercentage = lastMonthCount > 0 
+            ? ((currentMonthCount - lastMonthCount) / lastMonthCount * 100).toFixed(1)
+            : currentMonthCount > 0 ? 100 : 0;
+
+        // Format monthly data for charts (fill missing months with 0)
+        const monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+
+        const formattedMonthlyData = [];
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(twelveMonthsAgo);
+            date.setMonth(twelveMonthsAgo.getMonth() + i);
+            
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            
+            const statsForMonth = monthlyStats.find(
+                stat => stat._id.month === month && stat._id.year === year
+            );
+            
+            formattedMonthlyData.push({
+                month: `${monthNames[month - 1]} ${year}`,
+                count: statsForMonth?.count || 0,
+                year,
+                monthNumber: month
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalClients,
+                currentMonthCount,
+                lastMonthCount,
+                growthPercentage: parseFloat(growthPercentage),
+                monthlyData: formattedMonthlyData,
+                rawMonthlyStats: monthlyStats
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching client statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch client statistics',
+            error: error.message
+        });
+    }
+};
+
 // (Auth routes removed)
 
 export const createOrUpdateClient = async (req, res) => {
@@ -1249,25 +1349,25 @@ const syncClientsFromJobs = async (req, res) => {
             const clientData = {
                 email: email.toLowerCase(),
                 name: email.split('@')[0], // Use email prefix as default name
-                jobDeadline: "",
-                applicationStartDate: "",
-                dashboardInternName: "",
-                dashboardTeamLeadName: "",
+                jobDeadline: " ",
+                applicationStartDate: " ",
+                dashboardInternName: " ",
+                dashboardTeamLeadName: " ",
                 planType: "ignite",
                 planPrice: 199,
-                onboardingDate: "",
+                onboardingDate: new Date().toLocaleString('en-US', 'Asia/Kolkata'),
                 whatsappGroupMade: false,
-                whatsappGroupMadeDate: "",
+                whatsappGroupMadeDate: " ",
                 dashboardCredentialsShared: false,
-                dashboardCredentialsSharedDate: "",
+                dashboardCredentialsSharedDate: " ",
                 resumeSent: false,
-                resumeSentDate: "",
+                resumeSentDate: " ",
                 coverLetterSent: false,
-                coverLetterSentDate: "",
+                coverLetterSentDate: " ",
                 portfolioMade: false,
-                portfolioMadeDate: "",
+                portfolioMadeDate: " ",
                 linkedinOptimization: false,
-                linkedinOptimizationDate: "",
+                linkedinOptimizationDate: " ",
                 gmailCredentials: {
                     email: "",
                     password: ""
@@ -1281,9 +1381,12 @@ const syncClientsFromJobs = async (req, res) => {
                     password: ""
                 },
                 amountPaid: 0,
-                amountPaidDate: "",
+                amountPaidDate: " ",
                 modeOfPayment: "paypal",
                 status: "active",
+                companyName: " ",
+                lastApplicationDate: " ",
+                jobStatus: "still_searching",
                 createdAt: new Date().toLocaleString('en-US', 'Asia/Kolkata'),
                 updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
             };
@@ -1417,6 +1520,7 @@ const getUniqueClientsFromJobs = async (req, res) => {
 
 // Client routes
 app.get('/api/clients', getAllClients);
+app.get('/api/clients/stats', getClientStats);
 app.get('/api/clients/:email', getClientByEmail);
 app.get('/api/clients/all', async (req, res) => {
   try {
