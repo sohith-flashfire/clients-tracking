@@ -68,6 +68,12 @@ export default function Layout({ children }) {
               </button>
             </Link>
 
+            <Link to="/client-dashboard">
+              <button className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                Client Dashboard
+              </button>
+            </Link>
+
           <div className={((JSON.parse(localStorage.getItem('user') || '{}')?.role || '').toLowerCase() === 'team_lead') ? 'hidden' : 'contents'}>
   <Link to="/clients/new">
     <button className="w-full p-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium">
