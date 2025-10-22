@@ -138,8 +138,8 @@ export default function ClientDashboard() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md border">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow-md border">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-blue-100 text-blue-600">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md border">
+          <div className="bg-white p-4 rounded-lg shadow-md border">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-green-100 text-green-600">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +167,7 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md border">
+          <div className="bg-white p-4 rounded-lg shadow-md border">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-purple-100 text-purple-600">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,26 +185,26 @@ export default function ClientDashboard() {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Monthly Growth Chart */}
-          <div className="bg-white p-6 rounded-lg shadow-md border">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Monthly Client Growth</h2>
-            <div className="h-80">
-              <svg width="100%" height="100%" viewBox="0 0 400 300">
+          <div className="bg-white p-4 rounded-lg shadow-md border">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Monthly Client Growth</h2>
+            <div className="h-64">
+              <svg width="100%" height="100%" viewBox="0 0 400 250">
                 {/* Chart background */}
                 <rect width="100%" height="100%" fill="#f8fafc" />
                 
                 {/* Y-axis */}
-                <line x1="40" y1="20" x2="40" y2="280" stroke="#e2e8f0" strokeWidth="2" />
+                <line x1="40" y1="20" x2="40" y2="230" stroke="#e2e8f0" strokeWidth="2" />
                 
                 {/* X-axis */}
-                <line x1="40" y1="280" x2="380" y2="280" stroke="#e2e8f0" strokeWidth="2" />
+                <line x1="40" y1="230" x2="380" y2="230" stroke="#e2e8f0" strokeWidth="2" />
                 
                 {/* Y-axis labels */}
                 {[0, 5, 10, 15, 20, 25].map((value, index) => (
                   <g key={value}>
-                    <line x1="35" y1={280 - (value * 10)} x2="45" y2={280 - (value * 10)} stroke="#64748b" />
-                    <text x="30" y={285 - (value * 10)} textAnchor="end" className="text-xs fill-gray-600">
+                    <line x1="35" y1={230 - (value * 8)} x2="45" y2={230 - (value * 8)} stroke="#64748b" />
+                    <text x="30" y={235 - (value * 8)} textAnchor="end" className="text-xs fill-gray-600">
                       {value}
                     </text>
                   </g>
@@ -213,7 +213,7 @@ export default function ClientDashboard() {
                 {/* Chart line and points */}
                 {monthlyStats.length > 0 && (() => {
                   const maxValue = Math.max(...monthlyStats.map(d => d.count), 1);
-                  const scale = 250 / maxValue;
+                  const scale = 200 / maxValue;
                   const stepX = 340 / (monthlyStats.length - 1);
                   
                   return (
@@ -221,7 +221,7 @@ export default function ClientDashboard() {
                       {/* Line path */}
                       <path
                         d={`M ${monthlyStats.map((d, i) => 
-                          `${50 + i * stepX},${280 - d.count * scale}`
+                          `${50 + i * stepX},${230 - d.count * scale}`
                         ).join(' L ')}`}
                         fill="none"
                         stroke="#3b82f6"
@@ -233,7 +233,7 @@ export default function ClientDashboard() {
                         <g key={i}>
                           <circle
                             cx={50 + i * stepX}
-                            cy={280 - d.count * scale}
+                            cy={230 - d.count * scale}
                             r="4"
                             fill="#3b82f6"
                             stroke="white"
@@ -242,7 +242,7 @@ export default function ClientDashboard() {
                           {/* Value labels */}
                           <text
                             x={50 + i * stepX}
-                            y={280 - d.count * scale - 10}
+                            y={230 - d.count * scale - 10}
                             textAnchor="middle"
                             className="text-xs fill-gray-700 font-medium"
                           >
@@ -259,10 +259,10 @@ export default function ClientDashboard() {
                   <text
                     key={i}
                     x={50 + i * (340 / (monthlyStats.length - 1))}
-                    y="295"
+                    y="245"
                     textAnchor="middle"
                     className="text-xs fill-gray-600"
-                    transform={`rotate(-45 ${50 + i * (340 / (monthlyStats.length - 1))} 295)`}
+                    transform={`rotate(-45 ${50 + i * (340 / (monthlyStats.length - 1))} 245)`}
                   >
                     {d.month}
                   </text>
@@ -272,19 +272,19 @@ export default function ClientDashboard() {
           </div>
 
           {/* Plan Type Distribution Chart */}
-          <div className="bg-white p-6 rounded-lg shadow-md border">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Plan Type Distribution</h2>
-            <div className="h-80">
-              <svg width="100%" height="100%" viewBox="0 0 400 300">
+          <div className="bg-white p-4 rounded-lg shadow-md border">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Plan Type Distribution</h2>
+            <div className="h-64">
+              <svg width="100%" height="100%" viewBox="0 0 400 250">
                 {/* Chart background */}
                 <rect width="100%" height="100%" fill="#f8fafc" />
                 
                 {planTypeStats.length > 0 && (() => {
                   const total = planTypeStats.reduce((sum, d) => sum + d.count, 0);
                   let currentAngle = 0;
-                  const centerX = 200;
-                  const centerY = 150;
-                  const radius = 80;
+                  const centerX = 150;
+                  const centerY = 125;
+                  const radius = 60;
                   
                   return (
                     <>
@@ -324,16 +324,16 @@ export default function ClientDashboard() {
                       {planTypeStats.map((d, i) => (
                         <g key={i}>
                           <rect
-                            x={320}
-                            y={50 + i * 30}
-                            width="15"
-                            height="15"
+                            x={250}
+                            y={40 + i * 25}
+                            width="12"
+                            height="12"
                             fill={getPlanTypeColor(d.planType)}
                           />
                           <text
-                            x={345}
-                            y={62 + i * 30}
-                            className="text-sm fill-gray-700"
+                            x={270}
+                            y={50 + i * 25}
+                            className="text-xs fill-gray-700"
                           >
                             {d.planType} ({d.count} - {d.percentage}%)
                           </text>
@@ -348,11 +348,11 @@ export default function ClientDashboard() {
         </div>
 
         {/* Additional Statistics */}
-        <div className="mt-8 bg-white p-6 rounded-lg shadow-md border">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Plan Type Breakdown</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-6 bg-white p-4 rounded-lg shadow-md border">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Plan Type Breakdown</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {planTypeStats.map((plan, index) => (
-              <div key={index} className="p-4 rounded-lg border" style={{ backgroundColor: `${getPlanTypeColor(plan.planType)}20` }}>
+              <div key={index} className="p-3 rounded-lg border" style={{ backgroundColor: `${getPlanTypeColor(plan.planType)}20` }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{plan.planType}</p>
