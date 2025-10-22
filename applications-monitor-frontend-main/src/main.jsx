@@ -29,6 +29,7 @@ import RegisterClient from './components/RegisterClient';
 import AdminDashboard from './components/AdminDashboard.jsx';
 import ManagerDashboard from './components/ManagerDashboard.jsx';
 import OperationsDetails from './components/OperationsDetails.jsx';
+import ClientDashboard from './components/ClientDashboard.jsx';
 
 const router = createBrowserRouter([
   {
@@ -62,6 +63,10 @@ const router = createBrowserRouter([
       {
         path : '/operations',
         element: <Monitor />
+      },
+      {
+        path : '/client-dashboard',
+        element: <ClientDashboard />
       }
     ]
   }
