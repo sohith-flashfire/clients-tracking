@@ -1560,10 +1560,151 @@ const getPlanTypeStats = async (req, res) => {
     }
 };
 
+// Get revenue statistics
+const getRevenueStats = async (req, res) => {
+    try {
+        // Plan pricing
+        const planPricing = {
+            'Executive': 45000,
+            'Professional': 35000,
+            'Ignite': 15000,
+            'Free Trial': 0
+        };
+
+        // Start from August 2025
+        const startDate = new Date('2025-08-01');
+        startDate.setHours(0, 0, 0, 0);
+
+        // Aggregate revenue by month from August 2025 onwards
+        const monthlyRevenue = await NewUserModel.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" },
+                        planType: "$planType"
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id.year": 1, "_id.month": 1 }
+            }
+        ]);
+
+        // Calculate total revenue
+        let totalRevenue = 0;
+        const revenueByMonth = {};
+
+        monthlyRevenue.forEach(stat => {
+            const planType = stat._id.planType;
+            const count = stat.count;
+            const price = planPricing[planType] || 0;
+            const revenue = count * price;
+            
+            totalRevenue += revenue;
+            
+            const monthKey = `${stat._id.year}-${stat._id.month.toString().padStart(2, '0')}`;
+            if (!revenueByMonth[monthKey]) {
+                revenueByMonth[monthKey] = {
+                    year: stat._id.year,
+                    month: stat._id.month,
+                    totalRevenue: 0,
+                    breakdown: {}
+                };
+            }
+            
+            revenueByMonth[monthKey].totalRevenue += revenue;
+            revenueByMonth[monthKey].breakdown[planType] = {
+                count,
+                revenue,
+                price
+            };
+        });
+
+        // Format monthly data for charts
+        const monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+
+        const formattedMonthlyData = [];
+        const currentDate = new Date();
+        const startDateForLoop = new Date('2025-08-01');
+        
+        // Generate months from August 2025 to current month
+        for (let date = new Date(startDateForLoop); date <= currentDate; date.setMonth(date.getMonth() + 1)) {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+            
+            const monthData = revenueByMonth[monthKey] || {
+                year,
+                month,
+                totalRevenue: 0,
+                breakdown: {}
+            };
+            
+            formattedMonthlyData.push({
+                month: `${monthNames[month - 1]} ${year}`,
+                revenue: monthData.totalRevenue,
+                year,
+                monthNumber: month,
+                breakdown: monthData.breakdown
+            });
+        }
+
+        // Calculate plan-wise totals
+        const planTotals = {};
+        Object.keys(planPricing).forEach(planType => {
+            planTotals[planType] = {
+                count: 0,
+                revenue: 0,
+                price: planPricing[planType]
+            };
+        });
+
+        monthlyRevenue.forEach(stat => {
+            const planType = stat._id.planType;
+            const count = stat.count;
+            const price = planPricing[planType] || 0;
+            const revenue = count * price;
+            
+            if (planTotals[planType]) {
+                planTotals[planType].count += count;
+                planTotals[planType].revenue += revenue;
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalRevenue,
+                monthlyRevenue: formattedMonthlyData,
+                planTotals,
+                planPricing
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching revenue statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch revenue statistics',
+            error: error.message
+        });
+    }
+};
+
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/stats', getClientStats);
 app.get('/api/clients/plan-stats', getPlanTypeStats);
+app.get('/api/clients/revenue-stats', getRevenueStats);
 app.get('/api/clients/:email', getClientByEmail);
 app.get('/api/clients/all', async (req, res) => {
   try {
