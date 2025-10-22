@@ -219,18 +219,15 @@ const getClientByEmail = async (req, res) => {
 // Get client onboarding statistics grouped by month
 const getClientStats = async (req, res) => {
     try {
-        // Get current date and calculate 12 months ago
-        const now = new Date();
-        const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setMonth(now.getMonth() - 11);
-        twelveMonthsAgo.setDate(1); // Start from first day of the month
-        twelveMonthsAgo.setHours(0, 0, 0, 0);
+        // Start from August 2025 instead of 12 months ago
+        const startDate = new Date('2025-08-01');
+        startDate.setHours(0, 0, 0, 0);
 
-        // Aggregate clients by month for the last 12 months using NewUserModel
+        // Aggregate clients by month from August 2025 onwards
         const monthlyStats = await NewUserModel.aggregate([
             {
                 $match: {
-                    createdAt: { $gte: twelveMonthsAgo }
+                    createdAt: { $gte: startDate }
                 }
             },
             {
@@ -269,17 +266,18 @@ const getClientStats = async (req, res) => {
             ? ((currentMonthCount - lastMonthCount) / lastMonthCount * 100).toFixed(1)
             : currentMonthCount > 0 ? 100 : 0;
 
-        // Format monthly data for charts (fill missing months with 0)
+        // Format monthly data for charts from August 2025 onwards
         const monthNames = [
             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ];
 
         const formattedMonthlyData = [];
-        for (let i = 0; i < 12; i++) {
-            const date = new Date(twelveMonthsAgo);
-            date.setMonth(twelveMonthsAgo.getMonth() + i);
-            
+        const currentDate = new Date();
+        const startDateForLoop = new Date('2025-08-01');
+        
+        // Generate months from August 2025 to current month
+        for (let date = new Date(startDateForLoop); date <= currentDate; date.setMonth(date.getMonth() + 1)) {
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
             
