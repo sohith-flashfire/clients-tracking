@@ -1518,9 +1518,54 @@ const getUniqueClientsFromJobs = async (req, res) => {
     }
 }
 
+// Get plan type statistics
+const getPlanTypeStats = async (req, res) => {
+    try {
+        // Aggregate clients by plan type
+        const planTypeStats = await NewUserModel.aggregate([
+            {
+                $group: {
+                    _id: "$planType",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            }
+        ]);
+
+        // Get total clients
+        const totalClients = await NewUserModel.countDocuments();
+
+        // Format data for charts
+        const formattedData = planTypeStats.map(stat => ({
+            planType: stat._id,
+            count: stat.count,
+            percentage: ((stat.count / totalClients) * 100).toFixed(1)
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalClients,
+                planTypeStats: formattedData,
+                rawStats: planTypeStats
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching plan type statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch plan type statistics',
+            error: error.message
+        });
+    }
+};
+
 // Client routes
 app.get('/api/clients', getAllClients);
 app.get('/api/clients/stats', getClientStats);
+app.get('/api/clients/plan-stats', getPlanTypeStats);
 app.get('/api/clients/:email', getClientByEmail);
 app.get('/api/clients/all', async (req, res) => {
   try {
@@ -1714,7 +1759,6 @@ app.post('/api/operations/:email/managed-users', addManagedUser);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
 
-// Client details route
-app.get('/api/clients/:email', getClientDetails);
+// Client details route (removed duplicate - using getClientByEmail instead)
 
 app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
