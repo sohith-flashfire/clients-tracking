@@ -259,10 +259,10 @@ export default function ClientDashboard() {
                   <text
                     key={i}
                     x={60 + i * (400 / (monthlyStats.length - 1))}
-                    y="275"
+                    y="285"
                     textAnchor="middle"
                     className="text-xs fill-gray-600"
-                    transform={`rotate(-45 ${60 + i * (400 / (monthlyStats.length - 1))} 275)`}
+                    transform={`rotate(-30 ${60 + i * (400 / (monthlyStats.length - 1))} 285)`}
                   >
                     {d.month}
                   </text>
