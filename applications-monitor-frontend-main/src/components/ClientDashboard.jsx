@@ -189,22 +189,22 @@ export default function ClientDashboard() {
           {/* Monthly Growth Chart */}
           <div className="bg-white p-4 rounded-lg shadow-md border">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Monthly Client Growth</h2>
-            <div className="h-64">
-              <svg width="100%" height="100%" viewBox="0 0 400 250">
+            <div className="h-72">
+              <svg width="100%" height="100%" viewBox="0 0 500 300">
                 {/* Chart background */}
                 <rect width="100%" height="100%" fill="#f8fafc" />
                 
                 {/* Y-axis */}
-                <line x1="40" y1="20" x2="40" y2="230" stroke="#e2e8f0" strokeWidth="2" />
+                <line x1="50" y1="20" x2="50" y2="250" stroke="#e2e8f0" strokeWidth="2" />
                 
                 {/* X-axis */}
-                <line x1="40" y1="230" x2="380" y2="230" stroke="#e2e8f0" strokeWidth="2" />
+                <line x1="50" y1="250" x2="450" y2="250" stroke="#e2e8f0" strokeWidth="2" />
                 
                 {/* Y-axis labels */}
                 {[0, 5, 10, 15, 20, 25].map((value, index) => (
                   <g key={value}>
-                    <line x1="35" y1={230 - (value * 8)} x2="45" y2={230 - (value * 8)} stroke="#64748b" />
-                    <text x="30" y={235 - (value * 8)} textAnchor="end" className="text-xs fill-gray-600">
+                    <line x1="45" y1={250 - (value * 9)} x2="55" y2={250 - (value * 9)} stroke="#64748b" />
+                    <text x="40" y={255 - (value * 9)} textAnchor="end" className="text-xs fill-gray-600">
                       {value}
                     </text>
                   </g>
@@ -213,15 +213,15 @@ export default function ClientDashboard() {
                 {/* Chart line and points */}
                 {monthlyStats.length > 0 && (() => {
                   const maxValue = Math.max(...monthlyStats.map(d => d.count), 1);
-                  const scale = 200 / maxValue;
-                  const stepX = 340 / (monthlyStats.length - 1);
+                  const scale = 220 / maxValue;
+                  const stepX = 400 / (monthlyStats.length - 1);
                   
                   return (
                     <>
                       {/* Line path */}
                       <path
                         d={`M ${monthlyStats.map((d, i) => 
-                          `${50 + i * stepX},${230 - d.count * scale}`
+                          `${60 + i * stepX},${250 - d.count * scale}`
                         ).join(' L ')}`}
                         fill="none"
                         stroke="#3b82f6"
@@ -232,8 +232,8 @@ export default function ClientDashboard() {
                       {monthlyStats.map((d, i) => (
                         <g key={i}>
                           <circle
-                            cx={50 + i * stepX}
-                            cy={230 - d.count * scale}
+                            cx={60 + i * stepX}
+                            cy={250 - d.count * scale}
                             r="4"
                             fill="#3b82f6"
                             stroke="white"
@@ -241,8 +241,8 @@ export default function ClientDashboard() {
                           />
                           {/* Value labels */}
                           <text
-                            x={50 + i * stepX}
-                            y={230 - d.count * scale - 10}
+                            x={60 + i * stepX}
+                            y={250 - d.count * scale - 10}
                             textAnchor="middle"
                             className="text-xs fill-gray-700 font-medium"
                           >
@@ -258,11 +258,11 @@ export default function ClientDashboard() {
                 {monthlyStats.map((d, i) => (
                   <text
                     key={i}
-                    x={50 + i * (340 / (monthlyStats.length - 1))}
-                    y="245"
+                    x={60 + i * (400 / (monthlyStats.length - 1))}
+                    y="275"
                     textAnchor="middle"
                     className="text-xs fill-gray-600"
-                    transform={`rotate(-45 ${50 + i * (340 / (monthlyStats.length - 1))} 245)`}
+                    transform={`rotate(-45 ${60 + i * (400 / (monthlyStats.length - 1))} 275)`}
                   >
                     {d.month}
                   </text>
