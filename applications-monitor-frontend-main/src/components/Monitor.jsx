@@ -1630,6 +1630,14 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
           </button>
           <button
             onClick={() => {
+              navigate('/client-dashboard');
+            }}
+            className="w-full p-3 rounded-lg transition-colors font-medium bg-purple-600 text-white hover:bg-purple-700"
+          >
+            Client Dashboard
+          </button>
+          <button
+            onClick={() => {
               setShowOperations(true);
               setShowClients(false);
               setShowRegisterClient(false);
