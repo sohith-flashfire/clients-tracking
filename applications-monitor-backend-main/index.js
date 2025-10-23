@@ -1075,26 +1075,19 @@ const deleteClient = async (req, res) => {
       operationsUpdated: 0
     };
 
-    // 1. Delete from ClientModel (dashboardtrackings collection)
     const clientResult = await ClientModel.deleteOne({ email: emailLower });
     deletionResults.clientDeleted = clientResult.deletedCount > 0;
 
-    // 2. Delete from NewUserModel (users collection)
     const userResult = await NewUserModel.deleteOne({ email: emailLower });
     deletionResults.userDeleted = userResult.deletedCount > 0;
 
-    // 3. Delete all jobs associated with this user
     const jobsResult = await JobModel.deleteMany({ userID: emailLower });
     deletionResults.jobsDeleted = jobsResult.deletedCount;
-
-    // 4. Remove from operations managed users
     const operationsResult = await OperationsModel.updateMany(
       { managedUsers: { $in: [emailLower] } },
       { $pull: { managedUsers: emailLower } }
     );
     deletionResults.operationsUpdated = operationsResult.modifiedCount;
-
-    // 5. Delete any session keys for this user (if they exist in UserModel)
     await SessionKeyModel.deleteMany({ userEmail: emailLower });
 
     res.status(200).json({
