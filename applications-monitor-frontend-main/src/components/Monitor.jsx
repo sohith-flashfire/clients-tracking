@@ -26,6 +26,13 @@ async function fetchAllClients() {
     return Array.isArray(data.clients) ? data.clients : [];
 }
 
+async function fetchDashboardManagers() {
+    const res = await fetch(`${API_BASE}/api/managers/public`);
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return Array.isArray(data.managers) ? data.managers : [];
+}
+
 // ---------------- Helpers ----------------
 function parseFlexibleDate(input) {
   if (!input) return null;
@@ -466,7 +473,7 @@ function OperationCard({ operation, onSelect, performanceCount = 0, performanceD
   );
 }
 
-function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, userRole = 'admin' }) {
+function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, userRole = 'admin', dashboardManagers = [], loadingManagers = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -663,13 +670,20 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
         <div>
           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Team Lead</label>
           {isEditing ? (
-            <input
-              type="text"
+            <select
               name="dashboardTeamLeadName"
               value={formData.dashboardTeamLeadName}
               onChange={handleInputChange}
+              disabled={loadingManagers}
               className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            >
+              <option value="">Select Manager</option>
+              {dashboardManagers.map((manager) => (
+                <option key={manager._id} value={manager.fullName}>
+                  {manager.fullName}
+                </option>
+              ))}
+            </select>
           ) : (
             <p className="text-sm text-slate-900 mt-1">
               {clientDetails.dashboardManager || "Not specified"}
@@ -1075,8 +1089,11 @@ export default function Monitor({ onClose }) {
   const [performanceDate, setPerformanceDate] = useState(new Date().toISOString()?.split('T')[0]);
   const { userRole } = useOutletContext();
   const [clientsLoaded, setClientsLoaded] = useState(false);
- const [clientsPostFilter, setClientsPostFilter] = useState([]);
+const [clientsPostFilter, setClientsPostFilter] = useState([]);
 
+  // Dashboard managers state
+  const [dashboardManagers, setDashboardManagers] = useState([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
 
   // Register Client state
   const [showRegisterClient, setShowRegisterClient] = useState(false);
@@ -1107,6 +1124,24 @@ export default function Monitor({ onClose }) {
       }
     }
   }, []);
+
+  // Fetch dashboard managers on component mount
+  useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        setLoadingManagers(true);
+        const managers = await fetchDashboardManagers();
+        setDashboardManagers(managers);
+      } catch (error) {
+        console.error('Error fetching dashboard managers:', error);
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+
+    fetchManagers();
+  }, []);
+
   // In-memory caches (TTL-based) for jobs and clients
   const cacheRef = useRef({
     clients: { data: null, ts: 0 },
@@ -2064,6 +2099,8 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
                 clientEmail={selectedClient}
                 clientDetails={clientDetails[selectedClient]}
                 onClientUpdate={handleClientUpdate}
+                dashboardManagers={dashboardManagers}
+                loadingManagers={loadingManagers}
                 userRole={userRole}
               />
             </div>
