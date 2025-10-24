@@ -1819,30 +1819,41 @@ const getManagedUsers = async (req, res) => {
             return res.status(404).json({ error: 'Operation not found' });
         }
         
-        // Get client details for managed users
+        // Get user details for managed users
         const managedUsers = [];
         for (const userId of operation.managedUsers || []) {
             // Convert ObjectId to string if needed
             const userIdStr = userId.toString();
             
-            const client = await ClientModel.findOne({ userID: userIdStr });
-            if (client) {
+            // First try to find in UserModel (NewUserModel)
+            const user = await NewUserModel.findById(userIdStr);
+            if (user) {
                 managedUsers.push({
                     userID: userIdStr,
-                    name: client.name,
-                    email: client.email || userIdStr,
-                    company: client.company
+                    name: user.name || 'Unknown',
+                    email: user.email || userIdStr,
+                    company: user.company || 'Unknown'
                 });
             } else {
-                // If client not found in ClientModel, still show the userID
-                // Check if it's an email format
-                const displayName = userIdStr.includes('@') ? userIdStr.split('@')[0] : `User ${userIdStr.substring(0, 8)}`;
-                managedUsers.push({
-                    userID: userIdStr,
-                    name: displayName,
-                    email: userIdStr.includes('@') ? userIdStr : 'Unknown',
-                    company: 'Unknown'
-                });
+                // If not found in UserModel, try ClientModel
+                const client = await ClientModel.findOne({ userID: userIdStr });
+                if (client) {
+                    managedUsers.push({
+                        userID: userIdStr,
+                        name: client.name,
+                        email: client.email || userIdStr,
+                        company: client.companyName || 'Unknown'
+                    });
+                } else {
+                    // If neither found, show the userID
+                    const displayName = userIdStr.includes('@') ? userIdStr.split('@')[0] : `User ${userIdStr.substring(0, 8)}`;
+                    managedUsers.push({
+                        userID: userIdStr,
+                        name: displayName,
+                        email: userIdStr.includes('@') ? userIdStr : 'Unknown',
+                        company: 'Unknown'
+                    });
+                }
             }
         }
         
@@ -1900,6 +1911,52 @@ const removeManagedUser = async (req, res) => {
     }
 }
 
+// Assign client to operator using email addresses
+const assignClientToOperator = async (req, res) => {
+    try {
+        const { clientEmail, operatorEmail } = req.body;
+        
+        if (!clientEmail || !operatorEmail) {
+            return res.status(400).json({ error: 'Both clientEmail and operatorEmail are required' });
+        }
+        
+        // Find the client by email to get their userID
+        const client = await NewUserModel.findOne({ email: clientEmail.toLowerCase() });
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+        
+        // Find the operator by email
+        const operator = await OperationsModel.findOne({ email: operatorEmail.toLowerCase() });
+        if (!operator) {
+            return res.status(404).json({ error: 'Operator not found' });
+        }
+        
+        // Check if client is already managed by this operator
+        const isAlreadyManaged = operator.managedUsers.some(managedId => managedId.toString() === client._id.toString());
+        if (isAlreadyManaged) {
+            return res.status(400).json({ error: 'Client is already managed by this operator' });
+        }
+        
+        // Add client's ObjectId to operator's managedUsers array
+        operator.managedUsers.push(client._id);
+        await operator.save();
+        
+        res.status(200).json({ 
+            message: 'Client assigned to operator successfully', 
+            managedUsers: operator.managedUsers,
+            client: {
+                userID: client.userID,
+                name: client.name,
+                email: client.email
+            }
+        });
+    } catch (error) {
+        console.error('Error assigning client to operator:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
 // Get available clients (not managed by this operation)
 const getAvailableClients = async (req, res) => {
     try {
@@ -1910,12 +1967,12 @@ const getAvailableClients = async (req, res) => {
             return res.status(404).json({ error: 'Operation not found' });
         }
         
-        // Get all clients
-        const allClients = await ClientModel.find({}, 'userID name email company').lean();
+        // Get all clients from NewUserModel (users collection)
+        const allClients = await NewUserModel.find({}, 'userID name email').lean();
         
         // Filter out clients that are already managed by this operation (handle ObjectId comparison)
         const availableClients = allClients.filter(client => 
-            !operation.managedUsers.some(managedId => managedId.toString() === client.userID)
+            !operation.managedUsers.some(managedId => managedId.toString() === client._id.toString())
         );
         
         res.status(200).json({ availableClients });
@@ -2011,7 +2068,37 @@ app.get('/api/operations/:email/jobs', getJobsByOperatorEmail);
 app.get('/api/operations/clients', getUniqueClientsFromJobs);
 app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
+app.post('/api/operations/assign-client', assignClientToOperator);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
+
+// Delete operation user with cascade deletion
+const deleteOperationUser = async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        // Find the operation
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Delete the operation
+        await OperationsModel.findByIdAndDelete(operation._id);
+        
+        // Remove all managed users from other operations that might reference this operation
+        // This is a cascade delete - remove this operation from any other operations' managedUsers
+        await OperationsModel.updateMany(
+            { managedUsers: operation._id },
+            { $pull: { managedUsers: operation._id } }
+        );
+        
+        res.status(200).json({ message: 'Operation user deleted successfully with cascade deletion' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+app.delete('/api/operations/:email/delete-operation', deleteOperationUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
 
 // Manager sync route

@@ -443,29 +443,29 @@ function OperationCard({ operation, onSelect, performanceCount = 0, performanceD
       onClick={() => onSelect(operation)}
       className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left"
     >
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
           <span className="text-green-600 font-semibold text-sm">
             {initials}
           </span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-slate-900 truncate">
+          <div className="font-medium text-slate-900 truncate mb-1">
             {displayName}
           </div>
-          <div className="text-sm text-slate-500 truncate">
+          <div className="text-sm text-slate-500 truncate mb-1">
             {operation.email}
           </div>
-          <div className="text-xs text-slate-400 capitalize">
+          <div className="text-xs text-slate-400 capitalize mb-2">
             {operation.role}
           </div>
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="text-xs text-slate-500 mb-1">
-            Applied on {new Date(performanceDate).toLocaleDateString('en-GB')}:
-          </div>
-          <div className="bg-green-100 text-green-800 text-sm font-bold px-2 py-1 rounded-full">
-            {performanceCount}
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              Applied on {new Date(performanceDate).toLocaleDateString('en-GB')}:
+            </div>
+            <div className="bg-green-100 text-green-800 text-sm font-bold px-2 py-1 rounded-full">
+              {performanceCount}
+            </div>
           </div>
         </div>
       </div>
@@ -1945,23 +1945,25 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
                     Track job applications and manage client assignments
                   </p>
                 </div>
-                {/* <button
-                  onClick={() => {
-                    setShowOperationDetails(true);
-                    setOperationDetailsEmail(selectedOperation.email);
-                  }}
-                  className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 font-medium shadow-sm"
-                >
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                {userRole === 'admin' && (
+                  <button
+                    onClick={() => {
+                      setShowOperationDetails(true);
+                      setOperationDetailsEmail(selectedOperation.email);
+                    }}
+                    className="group flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 font-medium shadow-sm"
+                  >
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                    </div>
+                    <span>Operator Details</span>
+                    <svg className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </div>
-                  <span>Personal Details</span>
-                  <svg className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button> */}
+                  </button>
+                )}
               </div>
             </div>
 
