@@ -205,6 +205,7 @@ const getAllClients = async (req, res) => {
             email: user.email,
             planType: user.planType,
             dashboardManager: user.dashboardManager, // This will show the actual manager name
+            status: 'active', // Default all users to active status
             userID: user.userID,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
