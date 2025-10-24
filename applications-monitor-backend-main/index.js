@@ -210,7 +210,18 @@ const getClientByEmail = async (req, res) => {
         if (!client) {
             return res.status(404).json({error: 'Client not found'});
         }
-        res.status(200).json({client});
+        
+        // Get manager name from users collection and add it to client data
+        const user = await NewUserModel.findOne({ email: email.toLowerCase() }).lean();
+        const managerName = user?.dashboardManager || '';
+        
+        // Add manager name to client data while keeping everything else from dashboardtrackings
+        const clientWithManager = {
+            ...client,
+            dashboardManager: managerName // Only this field comes from users collection
+        };
+        
+        res.status(200).json({client: clientWithManager});
     } catch (error) {
         res.status(500).json({error: error.message});
     }
@@ -1792,6 +1803,7 @@ app.get('/api/clients/:email/jobs', getJobsByClient);
 
 // Manager routes
 app.get('/api/managers', verifyToken, getAllManagers);
+app.get('/api/managers/public', getAllManagers); // Public endpoint for dropdown
 app.get('/api/managers/:id', verifyToken, getManagerById);
 app.post('/api/managers', verifyToken, verifyAdmin, upload.single('profilePhoto'), createManager);
 app.put('/api/managers/:id', verifyToken, verifyAdmin, upload.single('profilePhoto'), updateManager);
@@ -1934,6 +1946,63 @@ const getClientDetails = async (req, res) => {
     }
 };
 
+// Sync manager assignments from users collection to dashboardtrackings
+const syncManagerAssignments = async (req, res) => {
+    try {
+        console.log('🔄 Starting manager assignment sync...');
+        
+        // Get all users with dashboardManager assignments
+        const usersWithManagers = await NewUserModel.find({ 
+            dashboardManager: { $exists: true, $ne: null, $ne: "" } 
+        }).lean();
+        
+        console.log(`Found ${usersWithManagers.length} users with manager assignments`);
+        
+        let syncedCount = 0;
+        let errors = [];
+        
+        for (const user of usersWithManagers) {
+            try {
+                // Update the corresponding client in dashboardtrackings
+                const updateResult = await ClientModel.updateOne(
+                    { email: user.email.toLowerCase() },
+                    { 
+                        $set: { 
+                            dashboardTeamLeadName: user.dashboardManager,
+                            updatedAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
+                        } 
+                    }
+                );
+                
+                if (updateResult.matchedCount > 0) {
+                    syncedCount++;
+                    console.log(`✅ Synced manager "${user.dashboardManager}" for ${user.email}`);
+                } else {
+                    console.log(`⚠️  No matching client found in dashboardtrackings for ${user.email}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error syncing ${user.email}:`, error.message);
+                errors.push({ email: user.email, error: error.message });
+            }
+        }
+        
+        res.status(200).json({
+            success: true,
+            message: `Manager assignment sync completed`,
+            syncedCount,
+            totalUsers: usersWithManagers.length,
+            errors: errors.length > 0 ? errors : null
+        });
+        
+    } catch (error) {
+        console.error('❌ Error in syncManagerAssignments:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+};
+
 // Operations routes
 app.get('/api/operations', getAllOperations);
 app.get('/api/operations/:email', getOperationsByEmail);
@@ -1944,6 +2013,9 @@ app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
+
+// Manager sync route
+app.post('/api/clients/sync-managers', syncManagerAssignments);
 
 // Client details route (removed duplicate - using getClientByEmail instead)
 
