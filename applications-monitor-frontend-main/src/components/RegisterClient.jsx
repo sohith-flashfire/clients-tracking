@@ -260,7 +260,7 @@ const RegisterClient = () => {
                         {client.planType || 'N/A'}
                       </span>
                       <span className="text-xs text-gray-400">
-                        {client.dashboardManager || 'Unassigned'}
+                        {client.dashboardTeamLeadName || 'Unassigned'}
                       </span>
                     </div>
                   </div>
