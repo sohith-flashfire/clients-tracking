@@ -1756,6 +1756,7 @@ app.get('/api/clients/:email/jobs', getJobsByClient);
 
 // Manager routes
 app.get('/api/managers', verifyToken, getAllManagers);
+app.get('/api/managers/public', getAllManagers); // Public endpoint for dropdown
 app.get('/api/managers/:id', verifyToken, getManagerById);
 app.post('/api/managers', verifyToken, verifyAdmin, upload.single('profilePhoto'), createManager);
 app.put('/api/managers/:id', verifyToken, verifyAdmin, upload.single('profilePhoto'), updateManager);
