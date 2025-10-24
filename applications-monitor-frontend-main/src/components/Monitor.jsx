@@ -672,7 +672,7 @@ function ClientDetailsSection({ clientEmail, clientDetails, onClientUpdate, user
             />
           ) : (
             <p className="text-sm text-slate-900 mt-1">
-              {clientDetails.dashboardTeamLeadName || "Not specified"}
+              {clientDetails.dashboardManager || "Not specified"}
             </p>
           )}
         </div>
