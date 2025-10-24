@@ -195,26 +195,10 @@ const getAllJobs = async (req, res)=> {
 // Client management endpoints
 const getAllClients = async (req, res) => {
     try {
-        // Fetch clients from users collection instead of dashboardtrackings
-        const users = await NewUserModel.find({ userType: "User" }).lean();
-        
-        // Transform the data to match the expected format
-        const clients = users.map(user => ({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            planType: user.planType,
-            dashboardManager: user.dashboardManager, // This will show the actual manager name
-            status: 'active', // Default all users to active status
-            userID: user.userID,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-        }));
-        
-        console.log(`Fetched ${clients.length} clients from users collection`);
+        const clients = await ClientModel.find().lean();
+        // console.log(clients);
         res.status(200).json({clients});
     } catch (error) {
-        console.error('Error fetching clients from users collection:', error);
         res.status(500).json({error: error.message});
     }
 }
@@ -227,14 +211,14 @@ const getClientByEmail = async (req, res) => {
             return res.status(404).json({error: 'Client not found'});
         }
         
-        // Get manager name from users collection
+        // Get manager name from users collection and add it to client data
         const user = await NewUserModel.findOne({ email: email.toLowerCase() }).lean();
         const managerName = user?.dashboardManager || '';
         
-        // Add manager name to client data
+        // Add manager name to client data while keeping everything else from dashboardtrackings
         const clientWithManager = {
             ...client,
-            dashboardManager: managerName
+            dashboardManager: managerName // Only this field comes from users collection
         };
         
         res.status(200).json({client: clientWithManager});
