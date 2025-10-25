@@ -136,12 +136,24 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
 
     try {
       setAssignLoading(true);
-      const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operationEmail)}/managed-users`, {
+      
+      // Find the selected client's email from availableClients
+      // Now using _id instead of userID since we're using NewUserModel
+      const selectedClient = availableClients.find(client => client._id === selectedClientToAssign);
+      if (!selectedClient) {
+        alert('Selected client not found.');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/operations/assign-client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ userID: selectedClientToAssign }),
+        body: JSON.stringify({ 
+          clientEmail: selectedClient.email,
+          operatorEmail: operationEmail 
+        }),
       });
 
       if (response.ok) {
@@ -150,7 +162,8 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
         setSelectedClientToAssign('');
         alert('Client assigned successfully!');
       } else {
-        alert('Failed to assign client. Please try again.');
+        const errorData = await response.json();
+        alert(`Failed to assign client: ${errorData.error || 'Please try again.'}`);
       }
     } catch (error) {
       alert('Network error. Please try again.');
@@ -183,6 +196,27 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
   const openAssignModal = async () => {
     await fetchAvailableClients();
     setShowAssignModal(true);
+  };
+
+  const handleDeleteOperation = async () => {
+    if (!confirm('Are you sure you want to delete this operation user? This action cannot be undone and will perform cascade deletion.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operationEmail)}/delete-operation`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Operation user deleted successfully!');
+        onClose(); // Close the modal after successful deletion
+      } else {
+        alert('Failed to delete operation user. Please try again.');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    }
   };
 
   const navigationItems = [
@@ -241,15 +275,26 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
             <div className="flex gap-3">
               {!isEditing ? (
                 userRole === 'admin' ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-3 px-6 py-3 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    {operation ? 'Edit Details' : 'Add Details'}
-                  </button>
+                  <div className="flex gap-3">
+                    {/* <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-3 px-6 py-3 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      {operation ? 'Edit Details' : 'Add Details'}
+                    </button> */}
+                    <button
+                      onClick={handleDeleteOperation}
+                      className="flex items-center gap-3 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Operation User
+                    </button>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-3 px-6 py-3 bg-white/20 text-white rounded-xl font-semibold shadow-lg backdrop-blur-sm">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -512,12 +557,23 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
 
       {/* Assign User Modal */}
       {showAssignModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <div 
+            className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-slate-900">Assign Client</h3>
               <button
-                onClick={() => setShowAssignModal(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAssignModal(false);
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -537,12 +593,17 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
                 </label>
                 <select
                   value={selectedClientToAssign}
-                  onChange={(e) => setSelectedClientToAssign(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSelectedClientToAssign(e.target.value);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="">Select a client...</option>
                   {availableClients.map((client, index) => (
-                    <option key={index} value={client.userID}>
+                    <option key={index} value={client._id}>
                       {client.name || client.email.split('@')[0]} ({client.email})
                     </option>
                   ))}
@@ -558,13 +619,19 @@ const OperationsDetails = ({ operationEmail, onClose, userRole = 'admin' }) => {
             
             <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
               <button
-                onClick={() => setShowAssignModal(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAssignModal(false);
+                }}
                 className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAssignUser}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAssignUser();
+                }}
                 disabled={!selectedClientToAssign || assignLoading}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >

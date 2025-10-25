@@ -1066,6 +1066,52 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Delete client with cascade deletion
+const deleteClient = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const emailLower = email.toLowerCase();
+    
+    // Check if client exists
+    const client = await ClientModel.findOne({ email: emailLower });
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    // Perform cascade deletion
+    const deletionResults = {
+      clientDeleted: false,
+      userDeleted: false,
+      jobsDeleted: 0,
+      operationsUpdated: 0
+    };
+
+    const clientResult = await ClientModel.deleteOne({ email: emailLower });
+    deletionResults.clientDeleted = clientResult.deletedCount > 0;
+
+    const userResult = await NewUserModel.deleteOne({ email: emailLower });
+    deletionResults.userDeleted = userResult.deletedCount > 0;
+
+    const jobsResult = await JobModel.deleteMany({ userID: emailLower });
+    deletionResults.jobsDeleted = jobsResult.deletedCount;
+    const operationsResult = await OperationsModel.updateMany(
+      { managedUsers: { $in: [emailLower] } },
+      { $pull: { managedUsers: emailLower } }
+    );
+    deletionResults.operationsUpdated = operationsResult.modifiedCount;
+    await SessionKeyModel.deleteMany({ userEmail: emailLower });
+
+    res.status(200).json({
+      message: 'Client deleted successfully with cascade deletion',
+      deletedClient: { email: emailLower, name: client.name },
+      deletionResults
+    });
+  } catch (error) {
+    console.error('Error in deleteClient:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 //campaign routes
 
 // app.post("/api/track/utm-campaign-lead", async (req, res) => {
@@ -1478,26 +1524,66 @@ const createOrUpdateOperation = async (req, res) => {
 const getJobsByOperatorEmail = async (req, res) => {
     try {
         const { email } = req.params;
-        const { date } = req.query;
+        const { date, startDate, endDate } = req.query;
         
         let query = { operatorEmail: email.toLowerCase() };
         
         if (date) {
-            // Convert date from "2025-10-04" to match DB format
-            // DB format appears to be "4/10/2025" (day/month/year)
+            // Single date filter (backward compatibility)
             const targetDate = new Date(date);
             const month = targetDate.getMonth() + 1;
             const day = targetDate.getDate();
             const year = targetDate.getFullYear();
-            
-            // Create the format that matches the DB data: "4/10/2025"
             const dateString = `${day}/${month}/${year}`;
             
-            // Search for this date format in the appliedDate field
             query.appliedDate = {
                 $regex: dateString,
                 $options: 'i'
             };
+        } else if (startDate && endDate) {
+            // Date range filter
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            // Create date strings for the range
+            const startMonth = start.getMonth() + 1;
+            const startDay = start.getDate();
+            const startYear = start.getFullYear();
+            const startDateString = `${startDay}/${startMonth}/${startYear}`;
+            
+            const endMonth = end.getMonth() + 1;
+            const endDay = end.getDate();
+            const endYear = end.getFullYear();
+            const endDateString = `${endDay}/${endMonth}/${endYear}`;
+            
+            // If start and end are the same, use exact match
+            if (startDateString === endDateString) {
+                query.appliedDate = {
+                    $regex: startDateString,
+                    $options: 'i'
+                };
+            } else {
+                // For date range, we'll need to get all jobs and filter by date
+                // This is a simplified approach - in production you might want to optimize this
+                const allJobs = await JobModel.find({ operatorEmail: email.toLowerCase() }).select('-jobDescription').lean();
+                const filteredJobs = allJobs.filter(job => {
+                    if (!job.appliedDate) return false;
+                    
+                    // Parse the applied date from the job
+                    const jobDateParts = job.appliedDate.split('/');
+                    if (jobDateParts.length !== 3) return false;
+                    
+                    const jobDay = parseInt(jobDateParts[0]);
+                    const jobMonth = parseInt(jobDateParts[1]);
+                    const jobYear = parseInt(jobDateParts[2]);
+                    
+                    const jobDate = new Date(jobYear, jobMonth - 1, jobDay);
+                    
+                    return jobDate >= start && jobDate <= end;
+                });
+                
+                return res.status(200).json({jobs: filteredJobs});
+            }
         }
         
         const jobs = await JobModel.find(query).select('-jobDescription').lean();
@@ -1524,6 +1610,141 @@ const getUniqueClientsFromJobs = async (req, res) => {
         res.status(200).json({clients: uniqueUserIDs});
     } catch (error) {
         res.status(500).json({error: error.message});
+    }
+}
+
+// Get client statistics for an operator (applied and saved counts)
+const getClientStatistics = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const { startDate, endDate } = req.query;
+        
+        // Get managed users for this operator
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        const clientStats = [];
+        
+        // Get user details for managed users
+        for (const userId of operation.managedUsers || []) {
+            const userIdStr = userId.toString();
+            
+            // Find user details
+            let user = await NewUserModel.findById(userIdStr);
+            if (!user) {
+                // Try ClientModel as fallback
+                const client = await ClientModel.findOne({ userID: userIdStr });
+                if (client) {
+                    user = {
+                        name: client.name,
+                        email: client.email || userIdStr,
+                        _id: userIdStr
+                    };
+                }
+            }
+            
+            if (user) {
+                const userEmail = user.email || userIdStr;
+                const userName = user.name || userEmail.split('@')[0];
+                
+                // Count applied jobs in date range
+                let appliedQuery = { 
+                    operatorEmail: email.toLowerCase(),
+                    userID: userEmail
+                };
+                
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    // Get all jobs for this user and filter by date
+                    const allJobs = await JobModel.find({ 
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail 
+                    }).lean();
+                    
+                    const appliedCount = allJobs.filter(job => {
+                        if (!job.appliedDate) return false;
+                        
+                        const jobDateParts = job.appliedDate.split('/');
+                        if (jobDateParts.length !== 3) return false;
+                        
+                        const jobDay = parseInt(jobDateParts[0]);
+                        const jobMonth = parseInt(jobDateParts[1]);
+                        const jobYear = parseInt(jobDateParts[2]);
+                        
+                        const jobDate = new Date(jobYear, jobMonth - 1, jobDay);
+                        return jobDate >= start && jobDate <= end;
+                    }).length;
+                    
+                    // Count total saved jobs (no date filter)
+                    const savedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail,
+                        currentStatus: 'saved'
+                    });
+                    
+                    clientStats.push({
+                        name: userName,
+                        email: userEmail,
+                        appliedCount,
+                        savedCount
+                    });
+                } else {
+                    // No date range - just get total counts
+                    const appliedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail
+                    });
+                    
+                    const savedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail,
+                        currentStatus: 'saved'
+                    });
+                    
+                    clientStats.push({
+                        name: userName,
+                        email: userEmail,
+                        appliedCount,
+                        savedCount
+                    });
+                }
+            }
+        }
+        
+        res.status(200).json({ clientStats });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Get saved job counts for specific clients
+const getSavedJobCounts = async (req, res) => {
+    try {
+        const { userEmails } = req.body;
+        
+        if (!userEmails || !Array.isArray(userEmails)) {
+            return res.status(400).json({ error: 'userEmails array is required in request body' });
+        }
+        
+        const savedCounts = {};
+        
+        // Get saved job counts for each user email
+        for (const userEmail of userEmails) {
+            const savedCount = await JobModel.countDocuments({
+                userID: userEmail,
+                currentStatus: 'saved'
+            });
+            
+            savedCounts[userEmail] = savedCount;
+        }
+        
+        res.status(200).json({ savedCounts });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 }
 
@@ -1740,6 +1961,7 @@ app.get('/api/clients/all', async (req, res) => {
 
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
+app.delete('/api/clients/delete/:email', deleteClient);
 
 //get all the jobdatabase data..
 const getJobsByClient = async (req, res) => {
@@ -1772,30 +1994,41 @@ const getManagedUsers = async (req, res) => {
             return res.status(404).json({ error: 'Operation not found' });
         }
         
-        // Get client details for managed users
+        // Get user details for managed users
         const managedUsers = [];
         for (const userId of operation.managedUsers || []) {
             // Convert ObjectId to string if needed
             const userIdStr = userId.toString();
             
-            const client = await ClientModel.findOne({ userID: userIdStr });
-            if (client) {
+            // First try to find in UserModel (NewUserModel)
+            const user = await NewUserModel.findById(userIdStr);
+            if (user) {
                 managedUsers.push({
                     userID: userIdStr,
-                    name: client.name,
-                    email: client.email || userIdStr,
-                    company: client.company
+                    name: user.name || 'Unknown',
+                    email: user.email || userIdStr,
+                    company: user.company || 'Unknown'
                 });
             } else {
-                // If client not found in ClientModel, still show the userID
-                // Check if it's an email format
-                const displayName = userIdStr.includes('@') ? userIdStr.split('@')[0] : `User ${userIdStr.substring(0, 8)}`;
-                managedUsers.push({
-                    userID: userIdStr,
-                    name: displayName,
-                    email: userIdStr.includes('@') ? userIdStr : 'Unknown',
-                    company: 'Unknown'
-                });
+                // If not found in UserModel, try ClientModel
+                const client = await ClientModel.findOne({ userID: userIdStr });
+                if (client) {
+                    managedUsers.push({
+                        userID: userIdStr,
+                        name: client.name,
+                        email: client.email || userIdStr,
+                        company: client.companyName || 'Unknown'
+                    });
+                } else {
+                    // If neither found, show the userID
+                    const displayName = userIdStr.includes('@') ? userIdStr.split('@')[0] : `User ${userIdStr.substring(0, 8)}`;
+                    managedUsers.push({
+                        userID: userIdStr,
+                        name: displayName,
+                        email: userIdStr.includes('@') ? userIdStr : 'Unknown',
+                        company: 'Unknown'
+                    });
+                }
             }
         }
         
@@ -1853,6 +2086,52 @@ const removeManagedUser = async (req, res) => {
     }
 }
 
+// Assign client to operator using email addresses
+const assignClientToOperator = async (req, res) => {
+    try {
+        const { clientEmail, operatorEmail } = req.body;
+        
+        if (!clientEmail || !operatorEmail) {
+            return res.status(400).json({ error: 'Both clientEmail and operatorEmail are required' });
+        }
+        
+        // Find the client by email to get their userID
+        const client = await NewUserModel.findOne({ email: clientEmail.toLowerCase() });
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+        
+        // Find the operator by email
+        const operator = await OperationsModel.findOne({ email: operatorEmail.toLowerCase() });
+        if (!operator) {
+            return res.status(404).json({ error: 'Operator not found' });
+        }
+        
+        // Check if client is already managed by this operator
+        const isAlreadyManaged = operator.managedUsers.some(managedId => managedId.toString() === client._id.toString());
+        if (isAlreadyManaged) {
+            return res.status(400).json({ error: 'Client is already managed by this operator' });
+        }
+        
+        // Add client's ObjectId to operator's managedUsers array
+        operator.managedUsers.push(client._id);
+        await operator.save();
+        
+        res.status(200).json({ 
+            message: 'Client assigned to operator successfully', 
+            managedUsers: operator.managedUsers,
+            client: {
+                userID: client.userID,
+                name: client.name,
+                email: client.email
+            }
+        });
+    } catch (error) {
+        console.error('Error assigning client to operator:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
 // Get available clients (not managed by this operation)
 const getAvailableClients = async (req, res) => {
     try {
@@ -1863,12 +2142,12 @@ const getAvailableClients = async (req, res) => {
             return res.status(404).json({ error: 'Operation not found' });
         }
         
-        // Get all clients
-        const allClients = await ClientModel.find({}, 'userID name email company').lean();
+        // Get all clients from NewUserModel (users collection)
+        const allClients = await NewUserModel.find({}, 'userID name email').lean();
         
         // Filter out clients that are already managed by this operation (handle ObjectId comparison)
         const availableClients = allClients.filter(client => 
-            !operation.managedUsers.some(managedId => managedId.toString() === client.userID)
+            !operation.managedUsers.some(managedId => managedId.toString() === client._id.toString())
         );
         
         res.status(200).json({ availableClients });
@@ -1961,10 +2240,42 @@ app.get('/api/operations', getAllOperations);
 app.get('/api/operations/:email', getOperationsByEmail);
 app.post('/api/operations', createOrUpdateOperation);
 app.get('/api/operations/:email/jobs', getJobsByOperatorEmail);
+app.get('/api/operations/:email/client-stats', getClientStatistics);
+app.post('/api/operations/saved-counts', getSavedJobCounts);
 app.get('/api/operations/clients', getUniqueClientsFromJobs);
 app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
+app.post('/api/operations/assign-client', assignClientToOperator);
 app.delete('/api/operations/:email/managed-users/:userID', removeManagedUser);
+
+// Delete operation user with cascade deletion
+const deleteOperationUser = async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        // Find the operation
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        // Delete the operation
+        await OperationsModel.findByIdAndDelete(operation._id);
+        
+        // Remove all managed users from other operations that might reference this operation
+        // This is a cascade delete - remove this operation from any other operations' managedUsers
+        await OperationsModel.updateMany(
+            { managedUsers: operation._id },
+            { $pull: { managedUsers: operation._id } }
+        );
+        
+        res.status(200).json({ message: 'Operation user deleted successfully with cascade deletion' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+app.delete('/api/operations/:email/delete-operation', deleteOperationUser);
 app.get('/api/operations/:email/available-clients', getAvailableClients);
 
 // Manager sync route
