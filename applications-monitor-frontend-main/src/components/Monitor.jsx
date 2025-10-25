@@ -434,37 +434,189 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
-function OperationCard({ operation, onSelect, performanceCount = 0, performanceDate }) {
+function OperationCard({ operation, onSelect, performanceCount = 0, performanceDate, performanceEndDate }) {
+  const [clientStats, setClientStats] = useState([]);
+  const [savedCounts, setSavedCounts] = useState({});
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [showClientStats, setShowClientStats] = useState(false);
   const displayName = operation.name || operation?.email?.split('@')[0];
   const initials = displayName?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || operation.email.charAt(0).toUpperCase();
+  
+  // Fetch client statistics for this operator
+  useEffect(() => {
+    const fetchClientStats = async () => {
+      setLoadingClients(true);
+      try {
+        const params = new URLSearchParams();
+        if (performanceDate) {
+          params.append('startDate', performanceDate);
+        }
+        if (performanceEndDate) {
+          params.append('endDate', performanceEndDate);
+        }
+        
+        const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operation.email)}/client-stats?${params.toString()}`);
+        if (response.ok) {
+          const data = await response.json();
+          setClientStats(data.clientStats || []);
+          
+          // Fetch saved counts for all clients
+          if (data.clientStats && data.clientStats.length > 0) {
+            const userEmails = data.clientStats.map(client => client.email);
+            const savedResponse = await fetch(`${API_BASE}/api/operations/saved-counts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ userEmails })
+            });
+            
+            if (savedResponse.ok) {
+              const savedData = await savedResponse.json();
+              setSavedCounts(savedData.savedCounts || {});
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching client stats:', error);
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    
+    fetchClientStats();
+  }, [operation.email, performanceDate, performanceEndDate]);
+  
+  const formatDateRange = () => {
+    if (performanceDate === performanceEndDate) {
+      return new Date(performanceDate).toLocaleDateString('en-GB');
+    }
+    return `${new Date(performanceDate).toLocaleDateString('en-GB')} - ${new Date(performanceEndDate).toLocaleDateString('en-GB')}`;
+  };
   
   return (
     <button
       onClick={() => onSelect(operation)}
-      className="w-full p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-left"
+      className="w-full p-6 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all text-left shadow-sm hover:shadow-md"
     >
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-green-600 font-semibold text-sm">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-green-600 font-semibold text-lg">
             {initials}
           </span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-slate-900 truncate mb-1">
-            {displayName}
-          </div>
-          <div className="text-sm text-slate-500 truncate mb-1">
-            {operation.email}
-          </div>
-          <div className="text-xs text-slate-400 capitalize mb-2">
-            {operation.role}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-slate-500">
-              Applied on {new Date(performanceDate).toLocaleDateString('en-GB')}:
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="font-semibold text-slate-900 text-lg mb-1">
+                {displayName}
+              </div>
+              <div className="text-sm text-slate-500 mb-1">
+                {operation.email}
+              </div>
+              <div className="text-xs text-slate-400 capitalize">
+                {operation.role}
+              </div>
             </div>
-            <div className="bg-green-100 text-green-800 text-sm font-bold px-2 py-1 rounded-full">
-              {performanceCount}
+            <div className="text-right">
+              <div className="text-sm text-slate-500 mb-1">
+                Applied on {formatDateRange()}:
+              </div>
+              <div className="bg-green-100 text-green-800 text-lg font-bold px-3 py-1 rounded-full">
+                {performanceCount}
+              </div>
+            </div>
+          </div>
+          
+          {/* Client Statistics Section - Collapsible */}
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowClientStats(!showClientStats);
+              }}
+              className="w-full flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600">Clients:</span>
+                {loadingClients ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div>
+                    <span className="text-sm text-slate-400">Loading...</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-500">{clientStats.length} client(s)</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!loadingClients && clientStats.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-slate-500">
+                        {clientStats.reduce((sum, client) => sum + client.appliedCount, 0)} applied
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-slate-500">
+                        {Object.values(savedCounts).reduce((sum, count) => sum + count, 0)} saved
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <svg 
+                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                    showClientStats ? 'rotate-180' : ''
+                  }`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+            
+            {/* Collapsible Content */}
+            <div className={`transition-all duration-300 ease-in-out ${
+              showClientStats ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            }`}>
+              {loadingClients ? (
+                <div className="text-sm text-slate-400 py-2">Loading client statistics...</div>
+              ) : clientStats.length > 0 ? (
+                <div className="mt-2 max-h-80 overflow-y-auto space-y-2 pr-2">
+                  {clientStats.map((client, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between bg-blue-50 rounded-lg p-3 border border-blue-200"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 font-semibold text-xs">
+                            {client.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-slate-700">
+                          {client.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500">Applied</div>
+                          <div className="text-sm font-bold text-green-600">{client.appliedCount}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500">Saved</div>
+                          <div className="text-sm font-bold text-purple-600">{savedCounts[client.email] || 0}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-400 py-2">No clients assigned</div>
+              )}
             </div>
           </div>
         </div>
@@ -1087,6 +1239,7 @@ export default function Monitor({ onClose }) {
   const [availableClients, setAvailableClients] = useState([]);
   const [operationsPerformance, setOperationsPerformance] = useState({});
   const [performanceDate, setPerformanceDate] = useState(new Date().toISOString()?.split('T')[0]);
+  const [performanceEndDate, setPerformanceEndDate] = useState(new Date().toISOString()?.split('T')[0]);
   const { userRole } = useOutletContext();
   const [clientsLoaded, setClientsLoaded] = useState(false);
 const [clientsPostFilter, setClientsPostFilter] = useState([]);
@@ -1226,7 +1379,16 @@ const [clientsPostFilter, setClientsPostFilter] = useState([]);
       // Fetch performance for each operation in parallel
       const promises = operationsList.map(async (operation) => {
         try {
-          const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operation.email)}/jobs?date=${performanceDate}`);
+          // Build query parameters for date range
+          const params = new URLSearchParams();
+          if (performanceDate) {
+            params.append('startDate', performanceDate);
+          }
+          if (performanceEndDate) {
+            params.append('endDate', performanceEndDate);
+          }
+          
+          const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operation.email)}/jobs?${params.toString()}`);
           if (response.ok) {
             const data = await response.json();
             performanceData[operation.email] = data.jobs.length;
@@ -1391,7 +1553,7 @@ if (clientsResponse.ok) {
     if (operations.length > 0) {
       fetchOperationsPerformance(operations);
     }
-  }, [performanceDate, operations]);
+  }, [performanceDate, performanceEndDate, operations]);
 
   // Effect to fetch client details and jobs when selectedClient changes
   useEffect(() => {
@@ -1857,21 +2019,30 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
         {!showRegisterClient && !loading && !err && showOperations && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Select an Operations Team Member</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Operations Team Performance</h2>
             </div>
             
-            {/* Performance Date Selector */}
+            {/* Date Range Selector */}
             <div className="mb-6">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium text-slate-700">Performance Date:</label>
-                <input
-                  type="date"
-                  value={performanceDate}
-                  onChange={(e) => setPerformanceDate(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="text-sm font-medium text-slate-700">Date Range:</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={performanceDate}
+                    onChange={(e) => setPerformanceDate(e.target.value)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                  <span className="text-slate-500">to</span>
+                  <input
+                    type="date"
+                    value={performanceEndDate}
+                    onChange={(e) => setPerformanceEndDate(e.target.value)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
                 <div className="text-sm text-slate-600">
-                  Shows jobs applied on selected date
+                  Shows jobs applied within selected date range
                 </div>
               </div>
             </div>
@@ -1897,8 +2068,8 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
               </div>
             </div>
 
-            {/* Operations Cards Grid */}
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Operations Cards Grid - Full Width */}
+            <div className="space-y-4">
               {filteredOperations.map((operation) => (
                 <OperationCard 
                   key={operation._id} 
@@ -1906,6 +2077,7 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
                   onSelect={handleOperationSelect}
                   performanceCount={operationsPerformance[operation.email] || 0}
                   performanceDate={performanceDate}
+                  performanceEndDate={performanceEndDate}
                 />
               ))}
             </div>

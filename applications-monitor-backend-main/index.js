@@ -1524,26 +1524,66 @@ const createOrUpdateOperation = async (req, res) => {
 const getJobsByOperatorEmail = async (req, res) => {
     try {
         const { email } = req.params;
-        const { date } = req.query;
+        const { date, startDate, endDate } = req.query;
         
         let query = { operatorEmail: email.toLowerCase() };
         
         if (date) {
-            // Convert date from "2025-10-04" to match DB format
-            // DB format appears to be "4/10/2025" (day/month/year)
+            // Single date filter (backward compatibility)
             const targetDate = new Date(date);
             const month = targetDate.getMonth() + 1;
             const day = targetDate.getDate();
             const year = targetDate.getFullYear();
-            
-            // Create the format that matches the DB data: "4/10/2025"
             const dateString = `${day}/${month}/${year}`;
             
-            // Search for this date format in the appliedDate field
             query.appliedDate = {
                 $regex: dateString,
                 $options: 'i'
             };
+        } else if (startDate && endDate) {
+            // Date range filter
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            // Create date strings for the range
+            const startMonth = start.getMonth() + 1;
+            const startDay = start.getDate();
+            const startYear = start.getFullYear();
+            const startDateString = `${startDay}/${startMonth}/${startYear}`;
+            
+            const endMonth = end.getMonth() + 1;
+            const endDay = end.getDate();
+            const endYear = end.getFullYear();
+            const endDateString = `${endDay}/${endMonth}/${endYear}`;
+            
+            // If start and end are the same, use exact match
+            if (startDateString === endDateString) {
+                query.appliedDate = {
+                    $regex: startDateString,
+                    $options: 'i'
+                };
+            } else {
+                // For date range, we'll need to get all jobs and filter by date
+                // This is a simplified approach - in production you might want to optimize this
+                const allJobs = await JobModel.find({ operatorEmail: email.toLowerCase() }).select('-jobDescription').lean();
+                const filteredJobs = allJobs.filter(job => {
+                    if (!job.appliedDate) return false;
+                    
+                    // Parse the applied date from the job
+                    const jobDateParts = job.appliedDate.split('/');
+                    if (jobDateParts.length !== 3) return false;
+                    
+                    const jobDay = parseInt(jobDateParts[0]);
+                    const jobMonth = parseInt(jobDateParts[1]);
+                    const jobYear = parseInt(jobDateParts[2]);
+                    
+                    const jobDate = new Date(jobYear, jobMonth - 1, jobDay);
+                    
+                    return jobDate >= start && jobDate <= end;
+                });
+                
+                return res.status(200).json({jobs: filteredJobs});
+            }
         }
         
         const jobs = await JobModel.find(query).select('-jobDescription').lean();
@@ -1570,6 +1610,141 @@ const getUniqueClientsFromJobs = async (req, res) => {
         res.status(200).json({clients: uniqueUserIDs});
     } catch (error) {
         res.status(500).json({error: error.message});
+    }
+}
+
+// Get client statistics for an operator (applied and saved counts)
+const getClientStatistics = async (req, res) => {
+    try {
+        const { email } = req.params;
+        const { startDate, endDate } = req.query;
+        
+        // Get managed users for this operator
+        const operation = await OperationsModel.findOne({ email: email.toLowerCase() });
+        if (!operation) {
+            return res.status(404).json({ error: 'Operation not found' });
+        }
+        
+        const clientStats = [];
+        
+        // Get user details for managed users
+        for (const userId of operation.managedUsers || []) {
+            const userIdStr = userId.toString();
+            
+            // Find user details
+            let user = await NewUserModel.findById(userIdStr);
+            if (!user) {
+                // Try ClientModel as fallback
+                const client = await ClientModel.findOne({ userID: userIdStr });
+                if (client) {
+                    user = {
+                        name: client.name,
+                        email: client.email || userIdStr,
+                        _id: userIdStr
+                    };
+                }
+            }
+            
+            if (user) {
+                const userEmail = user.email || userIdStr;
+                const userName = user.name || userEmail.split('@')[0];
+                
+                // Count applied jobs in date range
+                let appliedQuery = { 
+                    operatorEmail: email.toLowerCase(),
+                    userID: userEmail
+                };
+                
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    
+                    // Get all jobs for this user and filter by date
+                    const allJobs = await JobModel.find({ 
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail 
+                    }).lean();
+                    
+                    const appliedCount = allJobs.filter(job => {
+                        if (!job.appliedDate) return false;
+                        
+                        const jobDateParts = job.appliedDate.split('/');
+                        if (jobDateParts.length !== 3) return false;
+                        
+                        const jobDay = parseInt(jobDateParts[0]);
+                        const jobMonth = parseInt(jobDateParts[1]);
+                        const jobYear = parseInt(jobDateParts[2]);
+                        
+                        const jobDate = new Date(jobYear, jobMonth - 1, jobDay);
+                        return jobDate >= start && jobDate <= end;
+                    }).length;
+                    
+                    // Count total saved jobs (no date filter)
+                    const savedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail,
+                        currentStatus: 'saved'
+                    });
+                    
+                    clientStats.push({
+                        name: userName,
+                        email: userEmail,
+                        appliedCount,
+                        savedCount
+                    });
+                } else {
+                    // No date range - just get total counts
+                    const appliedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail
+                    });
+                    
+                    const savedCount = await JobModel.countDocuments({
+                        operatorEmail: email.toLowerCase(),
+                        userID: userEmail,
+                        currentStatus: 'saved'
+                    });
+                    
+                    clientStats.push({
+                        name: userName,
+                        email: userEmail,
+                        appliedCount,
+                        savedCount
+                    });
+                }
+            }
+        }
+        
+        res.status(200).json({ clientStats });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Get saved job counts for specific clients
+const getSavedJobCounts = async (req, res) => {
+    try {
+        const { userEmails } = req.body;
+        
+        if (!userEmails || !Array.isArray(userEmails)) {
+            return res.status(400).json({ error: 'userEmails array is required in request body' });
+        }
+        
+        const savedCounts = {};
+        
+        // Get saved job counts for each user email
+        for (const userEmail of userEmails) {
+            const savedCount = await JobModel.countDocuments({
+                userID: userEmail,
+                currentStatus: 'saved'
+            });
+            
+            savedCounts[userEmail] = savedCount;
+        }
+        
+        res.status(200).json({ savedCounts });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 }
 
@@ -2065,6 +2240,8 @@ app.get('/api/operations', getAllOperations);
 app.get('/api/operations/:email', getOperationsByEmail);
 app.post('/api/operations', createOrUpdateOperation);
 app.get('/api/operations/:email/jobs', getJobsByOperatorEmail);
+app.get('/api/operations/:email/client-stats', getClientStatistics);
+app.post('/api/operations/saved-counts', getSavedJobCounts);
 app.get('/api/operations/clients', getUniqueClientsFromJobs);
 app.get('/api/operations/:email/managed-users', getManagedUsers);
 app.post('/api/operations/:email/managed-users', addManagedUser);
