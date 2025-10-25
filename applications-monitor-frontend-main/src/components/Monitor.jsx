@@ -434,6 +434,127 @@ function ClientCard({ client, clientDetails, onSelect }) {
   );
 }
 
+function OperationsTableRow({ operation, onSelect, performanceCount = 0, performanceDate, performanceEndDate }) {
+  const [clientStats, setClientStats] = useState([]);
+  const [savedCounts, setSavedCounts] = useState({});
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [showClientStats, setShowClientStats] = useState(false);
+  const displayName = operation.name || operation?.email?.split('@')[0];
+  const initials = displayName?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || operation.email.charAt(0).toUpperCase();
+  
+  // Fetch client statistics for this operator
+  useEffect(() => {
+    const fetchClientStats = async () => {
+      setLoadingClients(true);
+      try {
+        const params = new URLSearchParams();
+        if (performanceDate) {
+          params.append('startDate', performanceDate);
+        }
+        if (performanceEndDate) {
+          params.append('endDate', performanceEndDate);
+        }
+        
+        const response = await fetch(`${API_BASE}/api/operations/${encodeURIComponent(operation.email)}/client-stats?${params.toString()}`);
+        if (response.ok) {
+          const data = await response.json();
+          setClientStats(data.clientStats || []);
+          
+          // Fetch saved counts for all clients
+          if (data.clientStats && data.clientStats.length > 0) {
+            const userEmails = data.clientStats.map(client => client.email);
+            const savedResponse = await fetch(`${API_BASE}/api/operations/saved-counts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ userEmails })
+            });
+            
+            if (savedResponse.ok) {
+              const savedData = await savedResponse.json();
+              setSavedCounts(savedData.savedCounts || {});
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching client stats:', error);
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    
+    fetchClientStats();
+  }, [operation.email, performanceDate, performanceEndDate]);
+  
+  const totalApplied = clientStats.reduce((sum, client) => sum + client.appliedCount, 0);
+  const totalSaved = Object.values(savedCounts).reduce((sum, count) => sum + count, 0);
+  
+  return (
+    <tr className="hover:bg-slate-50 transition-colors">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+            <span className="text-green-600 font-semibold text-sm">
+              {initials}
+            </span>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-slate-900">
+              {displayName}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-slate-500">
+          {operation.email}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
+          {operation.role}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-slate-900">
+          {loadingClients ? (
+            <div className="flex items-center">
+              <div className="w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin mr-2"></div>
+              <span className="text-slate-400">Loading...</span>
+            </div>
+          ) : (
+            `${clientStats.length} client(s)`
+          )}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-bold text-green-600">
+          {performanceCount}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-bold text-slate-900">
+          {totalApplied}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-bold text-purple-600">
+          {totalSaved}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <button
+          onClick={() => onSelect(operation)}
+          className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-md transition-colors"
+        >
+          View Details
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 function OperationCard({ operation, onSelect, performanceCount = 0, performanceDate, performanceEndDate }) {
   const [clientStats, setClientStats] = useState([]);
   const [savedCounts, setSavedCounts] = useState({});
@@ -2068,18 +2189,52 @@ const inactiveClients = clientsPostFilter.filter(c => c.status?.toLowerCase() ==
               </div>
             </div>
 
-            {/* Operations Cards Grid - Full Width */}
-            <div className="space-y-4">
-              {filteredOperations.map((operation) => (
-                <OperationCard 
-                  key={operation._id} 
-                  operation={operation} 
-                  onSelect={handleOperationSelect}
-                  performanceCount={operationsPerformance[operation.email] || 0}
-                  performanceDate={performanceDate}
-                  performanceEndDate={performanceEndDate}
-                />
-              ))}
+            {/* Operations Table */}
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Team Member
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Clients
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Applied on {performanceDate === performanceEndDate ? new Date(performanceDate).toLocaleDateString('en-GB') : `${new Date(performanceDate).toLocaleDateString('en-GB')} - ${new Date(performanceEndDate).toLocaleDateString('en-GB')}`}
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Total Applied
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Total Saved
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {filteredOperations.map((operation) => (
+                      <OperationsTableRow 
+                        key={operation._id} 
+                        operation={operation} 
+                        onSelect={handleOperationSelect}
+                        performanceCount={operationsPerformance[operation.email] || 0}
+                        performanceDate={performanceDate}
+                        performanceEndDate={performanceEndDate}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
