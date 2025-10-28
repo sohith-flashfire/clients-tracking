@@ -1748,6 +1748,146 @@ const getSavedJobCounts = async (req, res) => {
     }
 }
 
+// Get jobs by date - simple status counts
+const getJobsByDate = async (req, res) => {
+    try {
+        const { date } = req.body;
+        
+        if (!date) {
+            return res.status(400).json({ error: 'Date is required' });
+        }
+
+        // Convert date to proper format for comparison
+        const targetDate = new Date(date);
+        if (isNaN(targetDate.getTime())) {
+            return res.status(400).json({ error: 'Invalid date format' });
+        }
+
+        // Get all jobs
+        const allJobs = await JobModel.find({}).lean();
+        
+        // Filter jobs by date (check createdAt, appliedDate, or dateAdded)
+        const jobsOnDate = allJobs.filter(job => {
+            // Helper function to parse date strings like "7/17/2025, 2:06:55 PM"
+            const parseDateString = (dateStr) => {
+                if (!dateStr) return null;
+                
+                // Handle different date formats
+                try {
+                    // Format: "7/17/2025, 2:06:55 PM" or "7/17/2025, 2:06:55 pm"
+                    if (dateStr.includes(',')) {
+                        const datePart = dateStr.split(',')[0].trim();
+                        const [month, day, year] = datePart.split('/');
+                        return new Date(year, month - 1, day);
+                    }
+                    
+                    // Try standard Date parsing
+                    return new Date(dateStr);
+                } catch (error) {
+                    console.log('Date parsing error:', dateStr, error);
+                    return null;
+                }
+            };
+            
+            // Check createdAt date
+            if (job.createdAt) {
+                const createdAt = parseDateString(job.createdAt);
+                if (createdAt && !isNaN(createdAt.getTime())) {
+                    const jobDate = createdAt.toISOString().split('T')[0];
+                    const targetDateStr = targetDate.toISOString().split('T')[0];
+                    if (jobDate === targetDateStr) return true;
+                }
+            }
+            
+            // Check appliedDate if it exists
+            if (job.appliedDate) {
+                const appliedDate = parseDateString(job.appliedDate);
+                if (appliedDate && !isNaN(appliedDate.getTime())) {
+                    const jobDate = appliedDate.toISOString().split('T')[0];
+                    const targetDateStr = targetDate.toISOString().split('T')[0];
+                    if (jobDate === targetDateStr) return true;
+                }
+            }
+            
+            // Check dateAdded if it exists
+            if (job.dateAdded) {
+                const dateAdded = parseDateString(job.dateAdded);
+                if (dateAdded && !isNaN(dateAdded.getTime())) {
+                    const jobDate = dateAdded.toISOString().split('T')[0];
+                    const targetDateStr = targetDate.toISOString().split('T')[0];
+                    if (jobDate === targetDateStr) return true;
+                }
+            }
+            
+            return false;
+        });
+
+        // Group by status
+        const statusData = {
+            saved: { count: 0, clients: [] },
+            applied: { count: 0, clients: [] },
+            interviewing: { count: 0, clients: [] },
+            offer: { count: 0, clients: [] },
+            deleted: { count: 0, clients: [] }
+        };
+
+        // Count jobs by status and group by client
+        const clientCounts = {};
+        
+        jobsOnDate.forEach(job => {
+            const status = job.currentStatus?.toLowerCase() || 'saved';
+            const clientEmail = job.userID;
+            
+            // Map status names
+            let mappedStatus = status;
+            if (status === 'interview') mappedStatus = 'interviewing';
+            if (status === 'rejected') mappedStatus = 'deleted';
+            
+            if (statusData[mappedStatus]) {
+                statusData[mappedStatus].count++;
+                
+                // Count per client
+                if (!clientCounts[mappedStatus]) {
+                    clientCounts[mappedStatus] = {};
+                }
+                if (!clientCounts[mappedStatus][clientEmail]) {
+                    clientCounts[mappedStatus][clientEmail] = 0;
+                }
+                clientCounts[mappedStatus][clientEmail]++;
+            }
+        });
+
+        // Convert client counts to array format
+        Object.keys(statusData).forEach(status => {
+            if (clientCounts[status]) {
+                statusData[status].clients = Object.keys(clientCounts[status]).map(email => ({
+                    email,
+                    count: clientCounts[status][email]
+                }));
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            date: date,
+            totalJobs: jobsOnDate.length,
+            ...statusData
+        });
+
+    } catch (error) {
+        console.error('Error fetching jobs by date:', error);
+        res.status(500).json({ 
+            success: false,
+            error: error.message 
+        });
+    }
+};
+
+// Simple job analytics - removed complex version
+
+// Add the job analytics route after function definition
+app.post('/api/jobs/by-date', getJobsByDate);
+
 // Get plan type statistics
 const getPlanTypeStats = async (req, res) => {
     try {
