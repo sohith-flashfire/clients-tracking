@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Layout from './Layout';
 
-const API_BASE = import.meta.env.VITE_BASE || 'https://clients-tracking-backend.onrender.com';
+const API_BASE = import.meta.env.VITE_BASE || 'https://clients-tracking-backend.onrender.com' || 'https://applications-monitor-api.flashfirejobs.com/';
 
 if (!API_BASE) {
   console.error('❌ VITE_BASE environment variable is required');
