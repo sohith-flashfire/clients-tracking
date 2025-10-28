@@ -111,9 +111,6 @@ export default function JobAnalytics() {
                 {loading ? 'Loading...' : 'Refresh'}
               </button>
             </div>
-            <div className="mt-2 text-sm text-gray-600">
-              💡 <strong>Dates with data:</strong> Jul 17, 2025 (8 jobs), Oct 15, 2025 (11 jobs), Dec 8, 2025 (95 jobs), Dec 9, 2025 (137 jobs)
-            </div>
           </div>
 
           {/* Job Status Table */}
