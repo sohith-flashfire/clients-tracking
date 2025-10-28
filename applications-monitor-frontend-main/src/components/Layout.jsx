@@ -85,6 +85,11 @@ export default function Layout({ children }) {
       Manager Dashboard
     </button>
   </Link>
+  <Link to="/job-analytics">
+    <button className="w-full p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+      Job Analytics
+    </button>
+  </Link>
 </div>
 
 
