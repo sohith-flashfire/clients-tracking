@@ -90,6 +90,11 @@ export default function Layout({ children }) {
       Job Analytics
     </button>
   </Link>
+  <Link to="/client-job-analysis">
+    <button className="w-full p-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium">
+      Client Job Analysis
+    </button>
+  </Link>
 </div>
 
 

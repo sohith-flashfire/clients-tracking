@@ -1748,81 +1748,270 @@ const getSavedJobCounts = async (req, res) => {
     }
 }
 
-// Get jobs by date - simple status counts
-const getJobsByDate = async (req, res) => {
+// Optimized helper function to parse date strings
+const parseDateString = (dateStr) => {
+    if (!dateStr) return null;
+    
     try {
-        const { date } = req.body;
+        // Handle different date formats
+        if (dateStr.includes(',')) {
+            const datePart = dateStr.split(',')[0].trim();
+            const [month, day, year] = datePart.split('/');
+            return new Date(year, month - 1, day);
+        }
+        
+        // Try standard Date parsing
+        return new Date(dateStr);
+    } catch (error) {
+        return null;
+    }
+};
+
+// Cache for job analytics data
+const analyticsCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Performance monitoring
+const performanceStats = {
+    totalRequests: 0,
+    cacheHits: 0,
+    averageResponseTime: 0,
+    lastReset: Date.now()
+};
+
+// Get jobs by date - OPTIMIZED VERSION with pagination
+const getJobsByDate = async (req, res) => {
+    const startTime = Date.now();
+    performanceStats.totalRequests++;
+    
+    try {
+        const { date, page = 1, limit = 1000, includeClients = true } = req.body;
         
         if (!date) {
             return res.status(400).json({ error: 'Date is required' });
         }
 
-        // Convert date to proper format for comparison
-        const targetDate = new Date(date);
-        if (isNaN(targetDate.getTime())) {
+        // Validate pagination parameters
+        const pageNum = Math.max(1, parseInt(page));
+        const limitNum = Math.min(10000, Math.max(1, parseInt(limit))); // Max 10k records per page
+        const skip = (pageNum - 1) * limitNum;
+
+        // Check cache first (only for first page to avoid cache complexity)
+        const cacheKey = `jobs_by_date_${date}_${pageNum}_${limitNum}`;
+        const cached = analyticsCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL && pageNum === 1) {
+            performanceStats.cacheHits++;
+            const responseTime = Date.now() - startTime;
+            performanceStats.averageResponseTime = 
+                (performanceStats.averageResponseTime * (performanceStats.totalRequests - 1) + responseTime) / performanceStats.totalRequests;
+            
+            return res.status(200).json({
+                ...cached.data,
+                _performance: {
+                    fromCache: true,
+                    responseTime: responseTime,
+                    cacheHitRate: (performanceStats.cacheHits / performanceStats.totalRequests * 100).toFixed(2) + '%'
+                }
+            });
+        }
+
+        // Parse input date flexibly: supports 'DD/MM/YYYY', 'MM/DD/YYYY', and 'YYYY-MM-DD'
+        let year, month, day;
+        if (typeof date === 'string') {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                // YYYY-MM-DD
+                const [y, m, d] = date.split('-').map(n => parseInt(n, 10));
+                year = y; month = m; day = d;
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+                // D/M/YYYY or M/D/YYYY (ambiguous). We'll use the numbers as provided and
+                // generate multi-format regex below that covers both interpretations.
+                const [a, b, y] = date.split('/').map(n => parseInt(n, 10));
+                // Prefer interpreting as D/M/YYYY because the DB example is '29/10/YYYY'
+                day = a; month = b; year = y;
+            } else {
+                // Try JS Date as a last resort
+                const tmp = new Date(date);
+                if (!isNaN(tmp.getTime())) {
+                    year = tmp.getFullYear();
+                    month = tmp.getMonth() + 1;
+                    day = tmp.getDate();
+                }
+            }
+        }
+        if (!year || !month || !day) {
             return res.status(400).json({ error: 'Invalid date format' });
         }
 
-        // Get all jobs
-        const allJobs = await JobModel.find({}).lean();
-        
-        // Filter jobs by date (check createdAt, appliedDate, or dateAdded)
-        const jobsOnDate = allJobs.filter(job => {
-            // Helper function to parse date strings like "7/17/2025, 2:06:55 PM"
-            const parseDateString = (dateStr) => {
-                if (!dateStr) return null;
-                
-                // Handle different date formats
-                try {
-                    // Format: "7/17/2025, 2:06:55 PM" or "7/17/2025, 2:06:55 pm"
-                    if (dateStr.includes(',')) {
-                        const datePart = dateStr.split(',')[0].trim();
-                        const [month, day, year] = datePart.split('/');
-                        return new Date(year, month - 1, day);
+        // Build robust regex that matches both D/M/YYYY and M/D/YYYY (with or without leading zeros)
+        const dd = String(day).padStart(2, '0');
+        const mm = String(month).padStart(2, '0');
+        const dmY = `${day}/${month}/${year}`;      // D/M/YYYY
+        const dmY0 = `${dd}/${mm}/${year}`;         // DD/MM/YYYY
+        const mdY = `${month}/${day}/${year}`;      // M/D/YYYY
+        const mdY0 = `${mm}/${dd}/${year}`;         // MM/DD/YYYY
+        // Regex anchors to start of string; allow both zero-padded and non-padded variants
+        const multiFormatDateRegex = new RegExp(`^(?:${dmY}|${dmY0}|${mdY}|${mdY0})`);
+
+        // First, get total count for pagination using updatedAt
+        const countPipeline = [
+            {
+                $match: {
+                    updatedAt: { $regex: multiFormatDateRegex }
+                }
+            },
+            { $count: "total" }
+        ];
+
+        const totalCountResult = await JobModel.aggregate(countPipeline);
+        const totalCount = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
+        const totalPages = Math.ceil(totalCount / limitNum);
+
+        const pipeline = [
+            {
+                $match: {
+                    updatedAt: { $regex: multiFormatDateRegex }
+                }
+            },
+            { $skip: skip },
+            { $limit: limitNum },
+            {
+                $group: {
+                    _id: {
+                        status: {
+                            $switch: {
+                                branches: [
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /offer/ } }, then: "offer" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /appl/ } }, then: "applied" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /interview/ } }, then: "interviewing" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject|delete/ } }, then: "deleted" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /save/ } }, then: "saved" }
+                                ],
+                                default: "saved"
+                            }
+                        },
+                        userID: "$userID",
+                        userName: "$operatorName"
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.status",
+                    totalCount: { $sum: "$count" },
+                    clients: {
+                        $push: {
+                            email: "$_id.userID",
+                            name: "$_id.userName",
+                            count: "$count"
+                        }
                     }
+                }
+            }
+        ];
+
+        let results;
+        try {
+            results = await JobModel.aggregate(pipeline);
+        } catch (aggregationError) {
+            console.warn('Aggregation failed, falling back to optimized find method:', aggregationError.message);
+            
+            // Fallback: Use optimized find with projection and pagination using updatedAt
+            const jobs = await JobModel.find({
+                updatedAt: { $regex: multiFormatDateRegex }
+            })
+            .select('currentStatus userID operatorName updatedAt')
+            .lean()
+            .skip(skip)
+            .limit(limitNum);
+
+            const statusData = {
+                saved: { count: 0, clients: [] },
+                applied: { count: 0, clients: [] },
+                interviewing: { count: 0, clients: [] },
+                offer: { count: 0, clients: [] },
+                deleted: { count: 0, clients: [] }
+            };
+
+            const clientCounts = {};
+
+            jobs.forEach(job => {
+                if (job.updatedAt && job.updatedAt.startsWith(exactDatePattern)) {
+                    const status = (job.currentStatus || '').toLowerCase();
+                    const clientEmail = job.userID;
+                    const clientName = job.operatorName || 'Unknown';
                     
-                    // Try standard Date parsing
-                    return new Date(dateStr);
-                } catch (error) {
-                    console.log('Date parsing error:', dateStr, error);
-                    return null;
+                    // Map status names
+                    let mappedStatus = 'saved';
+                    if (status.includes('offer')) mappedStatus = 'offer';
+                    else if (status.includes('appl')) mappedStatus = 'applied';
+                    else if (status.includes('interview')) mappedStatus = 'interviewing';
+                    else if (status.includes('reject') || status.includes('delete')) mappedStatus = 'deleted';
+                    else if (status.includes('save')) mappedStatus = 'saved';
+                    
+                    if (statusData[mappedStatus]) {
+                        statusData[mappedStatus].count++;
+                        
+                        // Count per client with name
+                        if (!clientCounts[mappedStatus]) {
+                            clientCounts[mappedStatus] = {};
+                        }
+                        if (!clientCounts[mappedStatus][clientEmail]) {
+                            clientCounts[mappedStatus][clientEmail] = { count: 0, name: clientName };
+                        }
+                        clientCounts[mappedStatus][clientEmail].count++;
+                    }
+                }
+            });
+
+            // Convert client counts to array format with names
+            Object.keys(statusData).forEach(status => {
+                if (clientCounts[status]) {
+                    statusData[status].clients = Object.keys(clientCounts[status]).map(email => ({
+                        email,
+                        name: clientCounts[status][email].name,
+                        count: clientCounts[status][email].count
+                    }));
+                }
+            });
+
+            const totalJobs = Object.values(statusData).reduce((sum, status) => sum + status.count, 0);
+            
+            const responseTime = Date.now() - startTime;
+            performanceStats.averageResponseTime = 
+                (performanceStats.averageResponseTime * (performanceStats.totalRequests - 1) + responseTime) / performanceStats.totalRequests;
+
+            const responseData = {
+                success: true,
+                date: date,
+                totalJobs,
+                ...statusData,
+                pagination: {
+                    currentPage: pageNum,
+                    totalPages: Math.ceil(totalCount / limitNum),
+                    totalCount: totalCount,
+                    limit: limitNum,
+                    hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+                    hasPrevPage: pageNum > 1
+                },
+                _performance: {
+                    fromCache: false,
+                    responseTime: responseTime,
+                    cacheHitRate: (performanceStats.cacheHits / performanceStats.totalRequests * 100).toFixed(2) + '%',
+                    method: 'fallback'
                 }
             };
-            
-            // Check createdAt date
-            if (job.createdAt) {
-                const createdAt = parseDateString(job.createdAt);
-                if (createdAt && !isNaN(createdAt.getTime())) {
-                    const jobDate = createdAt.toISOString().split('T')[0];
-                    const targetDateStr = targetDate.toISOString().split('T')[0];
-                    if (jobDate === targetDateStr) return true;
-                }
-            }
-            
-            // Check appliedDate if it exists
-            if (job.appliedDate) {
-                const appliedDate = parseDateString(job.appliedDate);
-                if (appliedDate && !isNaN(appliedDate.getTime())) {
-                    const jobDate = appliedDate.toISOString().split('T')[0];
-                    const targetDateStr = targetDate.toISOString().split('T')[0];
-                    if (jobDate === targetDateStr) return true;
-                }
-            }
-            
-            // Check dateAdded if it exists
-            if (job.dateAdded) {
-                const dateAdded = parseDateString(job.dateAdded);
-                if (dateAdded && !isNaN(dateAdded.getTime())) {
-                    const jobDate = dateAdded.toISOString().split('T')[0];
-                    const targetDateStr = targetDate.toISOString().split('T')[0];
-                    if (jobDate === targetDateStr) return true;
-                }
-            }
-            
-            return false;
-        });
 
-        // Group by status
+            // Cache the result
+            analyticsCache.set(cacheKey, {
+                data: responseData,
+                timestamp: Date.now()
+            });
+
+            return res.status(200).json(responseData);
+        }
+
+        // Initialize status data
         const statusData = {
             saved: { count: 0, clients: [] },
             applied: { count: 0, clients: [] },
@@ -1831,48 +2020,58 @@ const getJobsByDate = async (req, res) => {
             deleted: { count: 0, clients: [] }
         };
 
-        // Count jobs by status and group by client
-        const clientCounts = {};
-        
-        jobsOnDate.forEach(job => {
-            const status = job.currentStatus?.toLowerCase() || 'saved';
-            const clientEmail = job.userID;
-            
-            // Map status names
-            let mappedStatus = status;
-            if (status === 'interview') mappedStatus = 'interviewing';
-            if (status === 'rejected') mappedStatus = 'deleted';
-            
-            if (statusData[mappedStatus]) {
-                statusData[mappedStatus].count++;
-                
-                // Count per client
-                if (!clientCounts[mappedStatus]) {
-                    clientCounts[mappedStatus] = {};
-                }
-                if (!clientCounts[mappedStatus][clientEmail]) {
-                    clientCounts[mappedStatus][clientEmail] = 0;
-                }
-                clientCounts[mappedStatus][clientEmail]++;
+        // Process aggregation results
+        let totalJobs = 0;
+        results.forEach(result => {
+            const status = result._id;
+            if (statusData[status]) {
+                statusData[status].count = result.totalCount;
+                statusData[status].clients = result.clients;
+                totalJobs += result.totalCount;
             }
         });
 
-        // Convert client counts to array format
-        Object.keys(statusData).forEach(status => {
-            if (clientCounts[status]) {
-                statusData[status].clients = Object.keys(clientCounts[status]).map(email => ({
-                    email,
-                    count: clientCounts[status][email]
-                }));
-            }
-        });
+        const responseTime = Date.now() - startTime;
+        performanceStats.averageResponseTime = 
+            (performanceStats.averageResponseTime * (performanceStats.totalRequests - 1) + responseTime) / performanceStats.totalRequests;
 
-        res.status(200).json({
+        const responseData = {
             success: true,
             date: date,
-            totalJobs: jobsOnDate.length,
-            ...statusData
+            totalJobs,
+            ...statusData,
+            pagination: {
+                currentPage: pageNum,
+                totalPages: totalPages,
+                totalCount: totalCount,
+                limit: limitNum,
+                hasNextPage: pageNum < totalPages,
+                hasPrevPage: pageNum > 1
+            },
+            _performance: {
+                fromCache: false,
+                responseTime: responseTime,
+                cacheHitRate: (performanceStats.cacheHits / performanceStats.totalRequests * 100).toFixed(2) + '%',
+                method: 'aggregation'
+            }
+        };
+
+        analyticsCache.set(cacheKey, {
+            data: responseData,
+            timestamp: Date.now()
         });
+
+
+        if (analyticsCache.size > 100) {
+            const entries = Array.from(analyticsCache.entries());
+            entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+            // Remove oldest 20 entries
+            for (let i = 0; i < 20 && i < entries.length; i++) {
+                analyticsCache.delete(entries[i][0]);
+            }
+        }
+
+        res.status(200).json(responseData);
 
     } catch (error) {
         console.error('Error fetching jobs by date:', error);
@@ -1887,6 +2086,152 @@ const getJobsByDate = async (req, res) => {
 
 // Add the job analytics route after function definition
 app.post('/api/jobs/by-date', getJobsByDate);
+
+// Client Job Analysis (Recent Activity) - per active client status counts and applied-on-date
+app.post('/api/analytics/client-job-analysis', async (req, res) => {
+    try {
+        const { date } = req.body || {};
+
+        // Build multi-format date regex if provided (for appliedDate)
+        let multiFormatDateRegex = null;
+        if (date && typeof date === 'string' && /^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})$/.test(date)) {
+            let y, m, d;
+            if (date.includes('-')) {
+                const [yy, mm, dd] = date.split('-').map(n => parseInt(n, 10));
+                y = yy; m = mm; d = dd;
+            } else {
+                const [a, b, yy] = date.split('/').map(n => parseInt(n, 10));
+                d = a; m = b; y = yy; // Prefer D/M/YYYY
+            }
+            const dd = String(d).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const dmY = `${d}/${m}/${y}`;
+            const dmY0 = `${dd}/${mm}/${y}`;
+            const mdY = `${m}/${d}/${y}`;
+            const mdY0 = `${mm}/${dd}/${y}`;
+            multiFormatDateRegex = new RegExp(`^(?:${dmY}|${dmY0}|${mdY}|${mdY0})`);
+        }
+
+        // Helper to map statuses fuzzily
+        const statusCase = {
+            $switch: {
+                branches: [
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /offer/ } }, then: "offer" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /appl/ } }, then: "applied" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /interview/ } }, then: "interviewing" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject|delete/ } }, then: "deleted" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /save/ } }, then: "saved" }
+                ],
+                default: "saved"
+            }
+        };
+
+        // Aggregate overall counts per client across ALL jobs (no active filter)
+        const overall = await JobModel.aggregate([
+            { $group: { _id: { userID: "$userID", status: statusCase }, count: { $sum: 1 } } },
+            { $group: { _id: "$_id.userID", statuses: { $push: { k: "$_id.status", v: "$count" } } } },
+            { $project: { _id: 0, userID: "$_id", counts: { $arrayToObject: "$statuses" } } }
+        ]);
+
+        // Aggregate applied-on-date per client if date provided using appliedDate
+        let appliedOnDate = [];
+        if (multiFormatDateRegex) {
+            appliedOnDate = await JobModel.aggregate([
+                { $match: { appliedDate: { $regex: multiFormatDateRegex } } },
+                { $group: { _id: "$userID", count: { $sum: 1 } } },
+                { $project: { _id: 0, userID: "$_id", count: 1 } }
+            ]);
+        }
+
+        // Merge results across all userIDs seen
+        const appliedMap = new Map(appliedOnDate.map(r => [r.userID, r.count]));
+        const overallMap = new Map(overall.map(r => [r.userID, r.counts]));
+        const allUserIDs = Array.from(new Set([...overallMap.keys(), ...appliedMap.keys()]));
+
+        const rows = allUserIDs.map(email => {
+            const counts = overallMap.get(email) || {};
+            return {
+                email,
+                name: email, // user name is taken from userID per requirement
+                saved: counts.saved || 0,
+                applied: counts.applied || 0,
+                interviewing: counts.interviewing || 0,
+                offer: counts.offer || 0,
+                rejected: counts.deleted || 0,
+                removed: counts.deleted || 0,
+                appliedOnDate: appliedMap.get(email) || 0
+            };
+        }).sort((a,b)=> a.email.localeCompare(b.email));
+
+        res.status(200).json({ success: true, date: date || null, rows });
+    } catch (e) {
+        console.error('client-job-analysis error', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// Applied-by-date: count jobs whose appliedDate falls on the given day, grouped by userID
+app.post('/api/analytics/applied-by-date', async (req, res) => {
+    try {
+        const { date } = req.body || {};
+        if (!date || typeof date !== 'string') {
+            return res.status(400).json({ success: false, error: 'date is required' });
+        }
+
+        // Build multi-format date regex for appliedDate matching
+        let y, m, d;
+        if (date.includes('-')) { // YYYY-MM-DD
+            const [yy, mm, dd] = date.split('-').map(n => parseInt(n, 10));
+            y = yy; m = mm; d = dd;
+        } else { // D/M/YYYY or M/D/YYYY
+            const [a, b, yy] = date.split('/').map(n => parseInt(n, 10));
+            d = a; m = b; y = yy;
+        }
+        if (!y || !m || !d) return res.status(400).json({ success: false, error: 'Invalid date' });
+        const dd = String(d).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const dmY = `${d}/${m}/${y}`;
+        const dmY0 = `${dd}/${mm}/${y}`;
+        const mdY = `${m}/${d}/${y}`;
+        const mdY0 = `${mm}/${dd}/${y}`;
+        const dateRegex = new RegExp(`^(?:${dmY}|${dmY0}|${mdY}|${mdY0})`);
+
+        const results = await JobModel.aggregate([
+            { $match: { appliedDate: { $regex: dateRegex } } },
+            { $group: { _id: '$userID', count: { $sum: 1 } } },
+            { $project: { _id: 0, userID: '$_id', count: 1 } }
+        ]);
+
+        // Return both array and map for convenience
+        const counts = {};
+        for (const r of results) counts[r.userID] = r.count;
+        res.status(200).json({ success: true, date, results, counts });
+    } catch (e) {
+        console.error('applied-by-date error', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+
+app.get('/api/analytics/performance', (req, res) => {
+    res.json({
+        success: true,
+        stats: {
+            ...performanceStats,
+            cacheSize: analyticsCache.size,
+            uptime: Date.now() - performanceStats.lastReset
+        }
+    });
+});
+
+app.post('/api/analytics/clear-cache', (req, res) => {
+    analyticsCache.clear();
+    performanceStats.totalRequests = 0;
+    performanceStats.cacheHits = 0;
+    performanceStats.averageResponseTime = 0;
+    performanceStats.lastReset = Date.now();
+    res.json({ success: true, message: 'Cache cleared' });
+});
 
 // Get plan type statistics
 const getPlanTypeStats = async (req, res) => {
