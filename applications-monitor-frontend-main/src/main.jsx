@@ -31,6 +31,7 @@ import ManagerDashboard from './components/ManagerDashboard.jsx';
 import OperationsDetails from './components/OperationsDetails.jsx';
 import ClientDashboard from './components/ClientDashboard.jsx';
 import JobAnalytics from './components/JobAnalytics.jsx';
+import ClientJobAnalysis from './components/ClientJobAnalysis.jsx';
 
 const router = createBrowserRouter([
   {
@@ -72,6 +73,10 @@ const router = createBrowserRouter([
       {
         path : '/job-analytics',
         element: <JobAnalytics />
+      }
+      ,{
+        path : '/client-job-analysis',
+        element: <ClientJobAnalysis />
       }
     ]
   }

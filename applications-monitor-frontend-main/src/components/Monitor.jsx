@@ -93,7 +93,10 @@ function getLastTimelineStatus(timeline = []) {
 function isAppliedNow(job) {
   const current = String(job.currentStatus || "").toLowerCase();
   const last = getLastTimelineStatus(job.timeline);
-  return current.includes("applied") && last && last.includes("applied");
+  // Consider job applied if either current status OR last timeline entry indicates applied
+  const currentApplied = current.includes("appl");
+  const lastApplied = !!last && last.includes("appl");
+  return currentApplied || lastApplied;
 }
 
 function sortByUpdatedDesc(a, b) {

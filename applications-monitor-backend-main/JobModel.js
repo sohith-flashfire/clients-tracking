@@ -81,3 +81,11 @@ export const JobSchema = new mongoose.Schema({
 });
 
 export const JobModel = mongoose.model('JobDB', JobSchema)
+
+JobModel.collection.createIndex({ "createdAt": 1 });
+JobModel.collection.createIndex({ "appliedDate": 1 });
+JobModel.collection.createIndex({ "dateAdded": 1 });
+JobModel.collection.createIndex({ "updatedAt": 1 }); // Primary index for latest data
+JobModel.collection.createIndex({ "currentStatus": 1 });
+JobModel.collection.createIndex({ "userID": 1 });
+JobModel.collection.createIndex({ "operatorEmail": 1 });
