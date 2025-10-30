@@ -89,6 +89,7 @@ export default function ClientJobAnalysis() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Client</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Total Applications</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Saved</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Applied</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Interviewing</th>
@@ -118,6 +119,9 @@ export default function ClientJobAnalysis() {
                 }).map((r, idx) => (
                   <tr key={r.email+idx} className={idx%2===0? 'bg-white':'bg-gray-50'}>
                     <td className="px-4 py-2 text-sm text-gray-900">{r.email}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {(Number(r.saved||0) + Number(r.applied||0) + Number(r.interviewing||0) + Number(r.offer||0))}
+                    </td>
                     <td className="px-4 py-2 text-sm">{r.saved}</td>
                     <td className="px-4 py-2 text-sm">{r.applied}</td>
                     <td className="px-4 py-2 text-sm">{r.interviewing}</td>
