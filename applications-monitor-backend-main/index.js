@@ -1883,7 +1883,8 @@ const getJobsByDate = async (req, res) => {
                                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /offer/ } }, then: "offer" },
                                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /appl/ } }, then: "applied" },
                                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /interview/ } }, then: "interviewing" },
-                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject|delete/ } }, then: "deleted" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject/ } }, then: "rejected" },
+                                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /delete|removed/ } }, then: "deleted" },
                                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /save/ } }, then: "saved" }
                                 ],
                                 default: "saved"
@@ -1930,6 +1931,7 @@ const getJobsByDate = async (req, res) => {
                 applied: { count: 0, clients: [] },
                 interviewing: { count: 0, clients: [] },
                 offer: { count: 0, clients: [] },
+                rejected: { count: 0, clients: [] },
                 deleted: { count: 0, clients: [] }
             };
 
@@ -1946,7 +1948,8 @@ const getJobsByDate = async (req, res) => {
                     if (status.includes('offer')) mappedStatus = 'offer';
                     else if (status.includes('appl')) mappedStatus = 'applied';
                     else if (status.includes('interview')) mappedStatus = 'interviewing';
-                    else if (status.includes('reject') || status.includes('delete')) mappedStatus = 'deleted';
+                    else if (status.includes('reject')) mappedStatus = 'rejected';
+                    else if (status.includes('delete') || status.includes('removed')) mappedStatus = 'deleted';
                     else if (status.includes('save')) mappedStatus = 'saved';
                     
                     if (statusData[mappedStatus]) {
@@ -2017,6 +2020,7 @@ const getJobsByDate = async (req, res) => {
             applied: { count: 0, clients: [] },
             interviewing: { count: 0, clients: [] },
             offer: { count: 0, clients: [] },
+            rejected: { count: 0, clients: [] },
             deleted: { count: 0, clients: [] }
         };
 
@@ -2119,7 +2123,8 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /offer/ } }, then: "offer" },
                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /appl/ } }, then: "applied" },
                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /interview/ } }, then: "interviewing" },
-                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject|delete/ } }, then: "deleted" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /reject/ } }, then: "rejected" },
+                    { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /delete|removed/ } }, then: "deleted" },
                     { case: { $regexMatch: { input: { $toLower: { $ifNull: ["$currentStatus", ""] } }, regex: /save/ } }, then: "saved" }
                 ],
                 default: "saved"
@@ -2157,7 +2162,7 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
                 applied: counts.applied || 0,
                 interviewing: counts.interviewing || 0,
                 offer: counts.offer || 0,
-                rejected: counts.deleted || 0,
+                rejected: counts.rejected || 0,
                 removed: counts.deleted || 0,
                 appliedOnDate: appliedMap.get(email) || 0
             };
