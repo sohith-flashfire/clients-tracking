@@ -12,7 +12,6 @@ if (!API_BASE) {
 export default function ClientDashboard() {
   const [monthlyStats, setMonthlyStats] = useState([]);
   const [planTypeStats, setPlanTypeStats] = useState([]);
-  const [revenueStats, setRevenueStats] = useState([]);
   const [totalClients, setTotalClients] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -68,7 +67,6 @@ export default function ClientDashboard() {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setRevenueStats(data.data.monthlyRevenue);
           setTotalRevenue(data.data.totalRevenue);
         } else {
           throw new Error(data.message || 'Failed to fetch revenue stats');
@@ -216,7 +214,7 @@ export default function ClientDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900">₹{totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-semibold text-gray-900">${totalRevenue.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -382,91 +380,6 @@ export default function ClientDashboard() {
                 })()}
               </svg>
             </div>
-          </div>
-        </div>
-
-        {/* Revenue Chart */}
-        <div className="bg-white p-4 rounded-lg shadow-md border mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Monthly Revenue</h2>
-          <div className="h-80">
-            <svg width="100%" height="100%" viewBox="0 0 800 350">
-              {/* Chart background */}
-              <rect width="100%" height="100%" fill="#f8fafc" />
-              
-              {/* Y-axis */}
-              <line x1="50" y1="40" x2="50" y2="280" stroke="#e2e8f0" strokeWidth="2" />
-              
-              {/* X-axis */}
-              <line x1="50" y1="280" x2="750" y2="280" stroke="#e2e8f0" strokeWidth="2" />
-              
-              {/* Y-axis labels */}
-              {[0, 50000, 100000, 150000, 200000, 250000].map((value, index) => (
-                <g key={value}>
-                  <line x1="45" y1={280 - (value / 1000)} x2="55" y2={280 - (value / 1000)} stroke="#64748b" />
-                  <text x="40" y={285 - (value / 1000)} textAnchor="end" className="text-xs fill-gray-600">
-                    ₹{(value / 1000)}K
-                  </text>
-                </g>
-              ))}
-              
-              {/* Chart line and points */}
-              {revenueStats.length > 0 && (() => {
-                const maxValue = Math.max(...revenueStats.map(d => d.revenue), 1);
-                const scale = 240 / (maxValue / 1000);
-                const stepX = 700 / (revenueStats.length - 1);
-                
-                return (
-                  <>
-                    {/* Line path */}
-                    <path
-                      d={`M ${revenueStats.map((d, i) => 
-                        `${60 + i * stepX},${280 - (d.revenue / 1000) * scale}`
-                      ).join(' L ')}`}
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="3"
-                    />
-                    
-                    {/* Data points */}
-                    {revenueStats.map((d, i) => (
-                      <g key={i}>
-                        <circle
-                          cx={60 + i * stepX}
-                          cy={280 - (d.revenue / 1000) * scale}
-                          r="4"
-                          fill="#10b981"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                        {/* Value labels */}
-                        <text
-                          x={60 + i * stepX}
-                          y={280 - (d.revenue / 1000) * scale - 10}
-                          textAnchor="middle"
-                          className="text-xs fill-gray-700 font-medium"
-                        >
-                          ₹{(d.revenue / 1000).toFixed(0)}K
-                        </text>
-                      </g>
-                    ))}
-                  </>
-                );
-              })()}
-              
-              {/* X-axis labels */}
-              {revenueStats.map((d, i) => (
-                <text
-                  key={i}
-                  x={60 + i * (700 / (revenueStats.length - 1))}
-                  y="305"
-                  textAnchor="middle"
-                  className="text-xs fill-gray-600"
-                  transform={`rotate(-30 ${60 + i * (700 / (revenueStats.length - 1))} 305)`}
-                >
-                  {d.month}
-                </text>
-              ))}
-            </svg>
           </div>
         </div>
 
