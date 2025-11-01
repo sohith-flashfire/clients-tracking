@@ -227,33 +227,56 @@ const getClientByEmail = async (req, res) => {
 // Get client onboarding statistics grouped by month
 const getClientStats = async (req, res) => {
     try {
-        // Start from August 2025 instead of 12 months ago
-        const startDate = new Date('2025-08-01');
-        startDate.setHours(0, 0, 0, 0);
+        // Get all clients from ClientModel to ensure consistency with revenue stats
+        const allClients = await ClientModel.find({}).lean();
+        
+        // Count clients by month from August 2025 onwards
+        const monthlyStatsMap = {};
+        let totalClients = 0;
 
-        // Aggregate clients by month from August 2025 onwards
-        const monthlyStats = await NewUserModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate }
+        allClients.forEach(client => {
+            // Parse createdAt string to Date
+            let clientDate;
+            try {
+                clientDate = new Date(client.createdAt);
+                if (isNaN(clientDate.getTime())) {
+                    return; // Skip invalid dates
                 }
-            },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" }
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $sort: { "_id.year": 1, "_id.month": 1 }
+            } catch (error) {
+                return; // Skip parsing errors
             }
-        ]);
 
-        // Get total clients
-        const totalClients = await NewUserModel.countDocuments();
+            // Filter for August 2025 onwards
+            const startDate = new Date('2025-08-01');
+            if (clientDate < startDate) {
+                return;
+            }
+
+            totalClients++;
+
+            // Group by month
+            const year = clientDate.getFullYear();
+            const month = clientDate.getMonth() + 1;
+            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+            
+            if (!monthlyStatsMap[monthKey]) {
+                monthlyStatsMap[monthKey] = {
+                    year,
+                    month,
+                    count: 0
+                };
+            }
+            monthlyStatsMap[monthKey].count++;
+        });
+
+        // Convert to array format matching the old structure
+        const monthlyStats = Object.values(monthlyStatsMap).sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.month - b.month;
+        }).map(stat => ({
+            _id: { year: stat.year, month: stat.month },
+            count: stat.count
+        }));
 
         // Get current month stats
         const currentMonth = new Date().getMonth() + 1;
@@ -2371,131 +2394,21 @@ const getPlanTypeStats = async (req, res) => {
 // Get revenue statistics
 const getRevenueStats = async (req, res) => {
     try {
-        // Plan pricing
-        const planPricing = {
-            'Executive': 45000,
-            'Professional': 35000,
-            'Ignite': 15000,
-            'Free Trial': 0
-        };
+        // Get all clients from ClientModel to calculate real revenue from amountPaid
+        const allClients = await ClientModel.find({}).lean();
 
-        // Start from August 2025
-        const startDate = new Date('2025-08-01');
-        startDate.setHours(0, 0, 0, 0);
-
-        // Aggregate revenue by month from August 2025 onwards
-        const monthlyRevenue = await NewUserModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" },
-                        planType: "$planType"
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $sort: { "_id.year": 1, "_id.month": 1 }
-            }
-        ]);
-
-        // Calculate total revenue
+        // Simply sum up all amountPaid values
         let totalRevenue = 0;
-        const revenueByMonth = {};
 
-        monthlyRevenue.forEach(stat => {
-            const planType = stat._id.planType;
-            const count = stat.count;
-            const price = planPricing[planType] || 0;
-            const revenue = count * price;
-            
-            totalRevenue += revenue;
-            
-            const monthKey = `${stat._id.year}-${stat._id.month.toString().padStart(2, '0')}`;
-            if (!revenueByMonth[monthKey]) {
-                revenueByMonth[monthKey] = {
-                    year: stat._id.year,
-                    month: stat._id.month,
-                    totalRevenue: 0,
-                    breakdown: {}
-                };
-            }
-            
-            revenueByMonth[monthKey].totalRevenue += revenue;
-            revenueByMonth[monthKey].breakdown[planType] = {
-                count,
-                revenue,
-                price
-            };
-        });
-
-        // Format monthly data for charts
-        const monthNames = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ];
-
-        const formattedMonthlyData = [];
-        const currentDate = new Date();
-        const startDateForLoop = new Date('2025-08-01');
-        
-        // Generate months from August 2025 to current month
-        for (let date = new Date(startDateForLoop); date <= currentDate; date.setMonth(date.getMonth() + 1)) {
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-            
-            const monthData = revenueByMonth[monthKey] || {
-                year,
-                month,
-                totalRevenue: 0,
-                breakdown: {}
-            };
-            
-            formattedMonthlyData.push({
-                month: `${monthNames[month - 1]} ${year}`,
-                revenue: monthData.totalRevenue,
-                year,
-                monthNumber: month,
-                breakdown: monthData.breakdown
-            });
-        }
-
-        // Calculate plan-wise totals
-        const planTotals = {};
-        Object.keys(planPricing).forEach(planType => {
-            planTotals[planType] = {
-                count: 0,
-                revenue: 0,
-                price: planPricing[planType]
-            };
-        });
-
-        monthlyRevenue.forEach(stat => {
-            const planType = stat._id.planType;
-            const count = stat.count;
-            const price = planPricing[planType] || 0;
-            const revenue = count * price;
-            
-            if (planTotals[planType]) {
-                planTotals[planType].count += count;
-                planTotals[planType].revenue += revenue;
-            }
+        allClients.forEach(client => {
+            const amountPaid = client.amountPaid || 0;
+            totalRevenue += amountPaid;
         });
 
         res.status(200).json({
             success: true,
             data: {
-                totalRevenue,
-                monthlyRevenue: formattedMonthlyData,
-                planTotals,
-                planPricing
+                totalRevenue
             }
         });
     } catch (error) {
