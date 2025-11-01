@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_BASE ;
 
 // Validate required environment variables
 if (!API_BASE) {
-  console.error('❌ VITE_BASE environment variable is required');
+  // VITE_BASE environment variable is required
 }
 
 export default function AdminDashboard() {
@@ -18,6 +18,10 @@ export default function AdminDashboard() {
   const [newUser, setNewUser] = useState({ email: '', password: '' });
   const [sessionKeys, setSessionKeys] = useState({});
   const [loadingSessionKey, setLoadingSessionKey] = useState({});
+  const [passwordChangeModal, setPasswordChangeModal] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Get auth token
   const getAuthToken = () => localStorage.getItem('authToken');
@@ -117,7 +121,7 @@ export default function AdminDashboard() {
         return data.sessionKeys;
       }
     } catch (error) {
-      console.error('Error fetching session keys:', error);
+      // Error fetching session keys
     }
     return [];
   };
@@ -145,6 +149,68 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       setError('Network error');
+    }
+  };
+
+  // Change password for admin user
+  const openPasswordChangeModal = (userId, userEmail) => {
+    setPasswordChangeModal({ userId, userEmail });
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setPasswordError('');
+  };
+
+  const closePasswordChangeModal = () => {
+    setPasswordChangeModal(null);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setPasswordError('');
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setChangingPassword(true);
+
+    // Validate passwords
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      setChangingPassword(false);
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      setChangingPassword(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/users/${passwordChangeModal.userId}/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setError('');
+        closePasswordChangeModal();
+        // Show success message
+        setTimeout(() => {
+          alert(`Password changed successfully for ${passwordChangeModal.userEmail}`);
+        }, 100);
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      setPasswordError('Network error. Please try again.');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -325,6 +391,15 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center gap-2">
+                          {user.role === 'admin' && (
+                            <button
+                              onClick={() => openPasswordChangeModal(user._id, user.email)}
+                              className="text-indigo-600 hover:text-indigo-800 text-xs"
+                              title="Change password"
+                            >
+                              Change Password
+                            </button>
+                          )}
                           {user.role === 'team_lead' && (
                             <button
                               onClick={() => generateSessionKey(user.email)}
@@ -353,6 +428,88 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {passwordChangeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Change Password
+                </h3>
+                <button
+                  onClick={closePasswordChangeModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Change password for: {passwordChangeModal.userEmail}
+              </p>
+            </div>
+
+            <form onSubmit={handlePasswordChange} className="px-6 py-4">
+              {passwordError && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-600">{passwordError}</p>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  required
+                  minLength={8}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter new password (min 8 characters)"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  required
+                  minLength={8}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closePasswordChangeModal}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={changingPassword}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {changingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
