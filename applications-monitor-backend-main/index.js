@@ -2177,9 +2177,9 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
             const counts = overallMap.get(email) || {};
             const client = clientMap.get(email) || {};
             // Use date-filtered removed count if date is selected, otherwise use total count
-            const removedCount = (multiFormatDateRegex && removedMap.has(email)) 
-                ? removedMap.get(email) 
-                : (counts.deleted || 0);
+            const removedCount = multiFormatDateRegex 
+                ? (removedMap.get(email) || 0)  // If date selected, show 0 if no jobs moved on that date
+                : (counts.deleted || 0);         // If no date selected, show total count
             return {
                 email,
                 name: client.name || email,
