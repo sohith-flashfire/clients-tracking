@@ -89,6 +89,8 @@ export default function ClientJobAnalysis() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Client</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Plan Type</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Total Applications</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Saved</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Applied</th>
@@ -113,12 +115,43 @@ export default function ClientJobAnalysis() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {[...(rows||[])].sort((a,b)=>{
-                  const av = Number(a?.appliedOnDate || 0);
-                  const bv = Number(b?.appliedOnDate || 0);
-                  return sortDir === 'asc' ? av - bv : bv - av;
+                  // When date is selected, sort by applied-on-date metric
+                  if (date) {
+                    const av = Number(a?.appliedOnDate || 0);
+                    const bv = Number(b?.appliedOnDate || 0);
+                    const cmp = sortDir === 'asc' ? av - bv : bv - av;
+                    if (cmp !== 0) return cmp;
+                  }
+                  // Sort by status: active first, then inactive
+                  const statusOrder = { 'active': 0, 'inactive': 1 };
+                  const statusA = statusOrder[a.status] ?? 2;
+                  const statusB = statusOrder[b.status] ?? 2;
+                  if (statusA !== statusB) return statusA - statusB;
+                  // Secondary sort: email alphabetically
+                  return a.email.localeCompare(b.email);
                 }).map((r, idx) => (
                   <tr key={r.email+idx} className={idx%2===0? 'bg-white':'bg-gray-50'}>
                     <td className="px-4 py-2 text-sm text-gray-900">{r.email}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {r.status ? (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                          r.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {r.planType ? (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold ${
+                          r.planType === 'executive' ? 'bg-purple-100 text-purple-700' :
+                          r.planType === 'professional' ? 'bg-blue-100 text-blue-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {r.planType.charAt(0).toUpperCase() + r.planType.slice(1)}
+                        </span>
+                      ) : '-'}
+                    </td>
                     <td className="px-4 py-2 text-sm">
                       {(Number(r.saved||0) + Number(r.applied||0) + Number(r.interviewing||0) + Number(r.offer||0))}
                     </td>
@@ -141,7 +174,7 @@ export default function ClientJobAnalysis() {
                 ))}
                 {rows.length===0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500">No data</td>
+                    <td colSpan={11} className="px-4 py-10 text-center text-gray-500">No data</td>
                   </tr>
                 )}
               </tbody>
