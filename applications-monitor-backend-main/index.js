@@ -152,7 +152,7 @@ const ConnectDB = () => mongoose.connect(process.env.MONGODB_URI, {
                                                                     serverSelectionTimeoutMS: 10_000,
                                                                     // (optional) heartbeatFrequencyMS: 10000,
                                                                     })
-                        .then(() => console.log("✅ Database connected successfully"))
+                        .then(() => {})
                                     .catch((error) => {
                                         console.error("❌ Database connection failed:", error);
                                         process.exit(1);
@@ -168,15 +168,12 @@ const cleanupSessionKeys = async () => {
     // Try to drop and recreate the collection to fix index issues
     try {
       await SessionKeyModel.collection.drop();
-      console.log('🗑️  Dropped sessionkeys collection');
     } catch (dropError) {
       // Collection might not exist, that's okay
-      console.log('ℹ️  Sessionkeys collection did not exist');
     }
     
     // Recreate the collection
     await SessionKeyModel.createCollection();
-    console.log('✅ Recreated sessionkeys collection with proper indexes');
   } catch (error) {
     console.error('❌ Error cleaning up session keys:', error);
   }
@@ -1387,16 +1384,12 @@ const syncClientsFromJobs = async (req, res) => {
             id && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id)
         ))];
 
-        console.log(`Found ${uniqueUserIDs.length} unique valid userIDs in jobs`);
-
         // Check which clients already exist in dashboardtrackings
         const existingClients = await ClientModel.find({}, 'email').lean();
         const existingEmails = existingClients.map(client => client.email);
         
         // Find missing clients
         const missingClients = uniqueUserIDs.filter(userID => !existingEmails.includes(userID));
-        
-        console.log(`Found ${missingClients.length} missing clients to create`);
 
         // Create missing clients with default values
         const createdClients = [];
@@ -1449,7 +1442,6 @@ const syncClientsFromJobs = async (req, res) => {
             const client = new ClientModel(clientData);
             await client.save();
             createdClients.push(client);
-            console.log(`Created client profile for: ${email}`);
         }
 
         res.status(200).json({
@@ -2148,25 +2140,75 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
             ]);
         }
 
+        // Aggregate removed jobs on selected date (ONLY for removed column)
+        let removedOnDate = [];
+        if (multiFormatDateRegex) {
+            removedOnDate = await JobModel.aggregate([
+                { 
+                    $match: { 
+                        $and: [
+                            { $or: [
+                                { currentStatus: { $regex: /delete/i } },
+                                { currentStatus: { $regex: /removed/i } }
+                            ]},
+                            { updatedAt: { $regex: multiFormatDateRegex } }
+                        ]
+                    }
+                },
+                { $group: { _id: "$userID", count: { $sum: 1 } } },
+                { $project: { _id: 0, userID: "$_id", count: 1 } }
+            ]);
+        }
+
         // Merge results across all userIDs seen
         const appliedMap = new Map(appliedOnDate.map(r => [r.userID, r.count]));
+        const removedMap = new Map(removedOnDate.map(r => [r.userID, r.count]));
         const overallMap = new Map(overall.map(r => [r.userID, r.counts]));
-        const allUserIDs = Array.from(new Set([...overallMap.keys(), ...appliedMap.keys()]));
+        const allUserIDs = Array.from(new Set([...overallMap.keys(), ...appliedMap.keys(), ...removedMap.keys()]));
 
-        const rows = allUserIDs.map(email => {
+        // Fetch client info (name, planType, and status) from ClientModel for all userIDs
+        const clientInfo = await ClientModel.find({ 
+            email: { $in: allUserIDs } 
+        }).select('email name planType planPrice status jobStatus').lean();
+        const clientMap = new Map(clientInfo.map(c => [c.email, { name: c.name, planType: c.planType, planPrice: c.planPrice, status: c.status, jobStatus: c.jobStatus }]));
+
+        // Prepare base rows from JobModel aggregates
+        let rows = allUserIDs.map(email => {
             const counts = overallMap.get(email) || {};
+            const client = clientMap.get(email) || {};
+            // Use date-filtered removed count if date is selected, otherwise use total count
+            const removedCount = (multiFormatDateRegex && removedMap.has(email)) 
+                ? removedMap.get(email) 
+                : (counts.deleted || 0);
             return {
                 email,
-                name: email, // user name is taken from userID per requirement
+                name: client.name || email,
+                planType: client.planType || null,
+                planPrice: client.planPrice || null,
+                status: client.status || null,
+                jobStatus: client.jobStatus || null,
                 saved: counts.saved || 0,
                 applied: counts.applied || 0,
                 interviewing: counts.interviewing || 0,
                 offer: counts.offer || 0,
                 rejected: counts.rejected || 0,
-                removed: counts.deleted || 0,
+                removed: removedCount,
                 appliedOnDate: appliedMap.get(email) || 0
             };
-        }).sort((a,b)=> a.email.localeCompare(b.email));
+        });
+
+        // Sort: active first, then inactive, then alphabetically by email
+        rows.sort((a, b) => {
+            // First, sort by status: active comes before inactive
+            const statusOrder = { 'active': 0, 'inactive': 1 };
+            const statusA = statusOrder[a.status] ?? 2;
+            const statusB = statusOrder[b.status] ?? 2;
+            if (statusA !== statusB) {
+                return statusA - statusB;
+            }
+            // If same status, sort by email alphabetically
+            return a.email.localeCompare(b.email);
+        });
 
         res.status(200).json({ success: true, date: date || null, rows });
     } catch (e) {
@@ -2671,14 +2713,10 @@ const getClientDetails = async (req, res) => {
 // Sync manager assignments from users collection to dashboardtrackings
 const syncManagerAssignments = async (req, res) => {
     try {
-        console.log('🔄 Starting manager assignment sync...');
-        
         // Get all users with dashboardManager assignments
         const usersWithManagers = await NewUserModel.find({ 
             dashboardManager: { $exists: true, $ne: null, $ne: "" } 
         }).lean();
-        
-        console.log(`Found ${usersWithManagers.length} users with manager assignments`);
         
         let syncedCount = 0;
         let errors = [];
@@ -2698,9 +2736,9 @@ const syncManagerAssignments = async (req, res) => {
                 
                 if (updateResult.matchedCount > 0) {
                     syncedCount++;
-                    console.log(`✅ Synced manager "${user.dashboardManager}" for ${user.email}`);
+                    // Manager synced successfully
                 } else {
-                    console.log(`⚠️  No matching client found in dashboardtrackings for ${user.email}`);
+                    // No matching client found
                 }
             } catch (error) {
                 console.error(`❌ Error syncing ${user.email}:`, error.message);
@@ -2773,4 +2811,4 @@ app.post('/api/clients/sync-managers', syncManagerAssignments);
 
 // Client details route (removed duplicate - using getClientByEmail instead)
 
-app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
+app.listen(process.env.PORT);
