@@ -1063,6 +1063,49 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Change password for user (admin only)
+const changePassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    // Validate new password
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Check if user exists
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Only allow changing password for admin users
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Can only change password for admin users' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password = hashedPassword;
+    user.updatedAt = new Date().toLocaleString('en-US', 'Asia/Kolkata');
+    await user.save();
+
+    res.status(200).json({
+      message: 'Password changed successfully',
+      email: user.email
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Delete client with cascade deletion
 const deleteClient = async (req, res) => {
   try {
@@ -1346,6 +1389,7 @@ app.post('/api/auth/login', login);
 app.post('/api/auth/users', verifyToken, verifyAdmin, createUser);
 app.get('/api/auth/users', verifyToken, verifyAdmin, getAllUsers);
 app.delete('/api/auth/users/:userId', verifyToken, verifyAdmin, deleteUser);
+app.put('/api/auth/users/:userId/change-password', verifyToken, verifyAdmin, changePassword);
 app.post('/api/auth/session-key', verifyToken, verifyAdmin, generateSessionKey);
 app.get('/api/auth/session-keys/:userEmail', verifyToken, verifyAdmin, getUserSessionKeys);
 app.post('/api/auth/cleanup-session-keys', verifyToken, verifyAdmin, cleanupSessionKeysEndpoint);
