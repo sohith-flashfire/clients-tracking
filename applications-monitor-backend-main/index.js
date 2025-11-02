@@ -1129,6 +1129,50 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Change password for client (admin only) - updates users collection
+const changeClientPassword = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { newPassword } = req.body;
+
+    // Validate new password
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Check if client exists in users collection
+    const client = await NewUserModel.findOne({ email: email.toLowerCase() });
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    // Encrypt new password using the same encrypt function used during creation
+    const encryptedPassword = encrypt(newPassword);
+
+    // Update password
+    await NewUserModel.updateOne(
+      { email: email.toLowerCase() },
+      { 
+        $set: { 
+          passwordHashed: encryptedPassword,
+          updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+        } 
+      }
+    );
+
+    res.status(200).json({
+      message: 'Client password changed successfully',
+      email: email.toLowerCase()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Delete client with cascade deletion
 const deleteClient = async (req, res) => {
   try {
@@ -2451,6 +2495,7 @@ app.get('/api/clients/all', async (req, res) => {
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 app.delete('/api/clients/delete/:email', deleteClient);
+app.put('/api/clients/:email/change-password', verifyToken, verifyAdmin, changeClientPassword);
 
 //get all the jobdatabase data..
 const getJobsByClient = async (req, res) => {
