@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Mail, Lock, User, Eye, EyeOff, CheckCircle, CreditCard, Users, ArrowLeft, Plus } from 'lucide-react';
+import { ArrowRight, Mail, Lock, User, Eye, EyeOff, CheckCircle, CreditCard, Users, ArrowLeft, Plus, KeyRound } from 'lucide-react';
 import { toastUtils, toastMessages } from '../utils/toastUtils.js';
 
 const RegisterClient = () => {
@@ -26,6 +26,16 @@ const RegisterClient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  
+  // Password change states
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Fetch dashboard managers and clients on component mount
   useEffect(() => {
@@ -219,6 +229,75 @@ const RegisterClient = () => {
   }
 };
 
+  const handleChangePasswordClick = (client) => {
+    setSelectedClient(client);
+    setShowPasswordChangeModal(true);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setPasswordError('');
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setPasswordChangeLoading(true);
+    setPasswordError('');
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const API_BASE_URL = import.meta.env.VITE_BASE;
+
+      const response = await fetch(`${API_BASE_URL}/api/clients/${encodeURIComponent(selectedClient.email)}/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newPassword })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toastUtils.success('Password changed successfully!');
+        setShowPasswordChangeModal(false);
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setSelectedClient(null);
+      } else {
+        setPasswordError(data?.error || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Password change failed:', error);
+      setPasswordError('Network error. Please try again.');
+    } finally {
+      setPasswordChangeLoading(false);
+    }
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordChangeModal(false);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setPasswordError('');
+    setSelectedClient(null);
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
+  };
+
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">
@@ -264,6 +343,15 @@ const RegisterClient = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <button
+                    onClick={() => handleChangePasswordClick(client)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    Change Password
+                  </button>
                 </div>
               </div>
             ))}
@@ -435,6 +523,125 @@ const RegisterClient = () => {
                       </>
                     )}
                   </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Password Change Modal */}
+        {showPasswordChangeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full shadow-lg">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-800">Change Password</h2>
+                  <button
+                    onClick={handleClosePasswordModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {selectedClient && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700">
+                      <span className="font-semibold">Client:</span> {selectedClient.name}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{selectedClient.email}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min 8 characters)"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmNewPassword ? 'text' : 'password'}
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      >
+                        {showConfirmNewPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {passwordError && (
+                    <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                      <p className="text-red-600 text-sm">{passwordError}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleClosePasswordModal}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={passwordChangeLoading}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {passwordChangeLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Changing...
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound className="w-4 h-4" />
+                          Change Password
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
               </div>
             </div>
