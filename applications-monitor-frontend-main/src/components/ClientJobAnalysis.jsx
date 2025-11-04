@@ -141,10 +141,9 @@ export default function ClientJobAnalysis() {
                   const isExecutive = plan.includes('executive');
                   const threshold = isIgnite ? 250 : isProfessional ? 500 : isExecutive ? 1000 : Infinity;
                   const exceeded = totalApplications > threshold;
-                  const baseRowColor = idx%2===0? 'bg-white':'bg-gray-50';
-                  const highlightClass = exceeded ? 'bg-red-100' : '';
+                  const rowColor = exceeded ? 'bg-red-100' : (idx%2===0 ? 'bg-white' : 'bg-gray-50');
                   return (
-                  <tr key={r.email+idx} className={`${baseRowColor} ${highlightClass}`}>
+                  <tr key={r.email+idx} className={rowColor}>
                     <td className="px-4 py-2 text-sm text-gray-900">{r.email}</td>
                     <td className="px-4 py-2 text-sm">
                       {r.status ? (
