@@ -83,8 +83,8 @@ const allowedOrigins = [
   "https://www.portal.flashfirejobs.com",
   "https://flashfire-dashboard-frontend.vercel.app",
   "https://flashfire-dashboard.vercel.app",
-  "https://hq.flashfirejobs.com/",
-  "https://hq.flashfirejobs.com",
+   "https://hq.flashfirejobs.com/",
+   "https://hq.flashfirejobs.com",
   
   // Additional origins from environment variable
   ...(process.env.ALLOWED_ORIGINS?.split(",") || [])
@@ -156,7 +156,7 @@ const ConnectDB = () => mongoose.connect(process.env.MONGODB_URI, {
                                                                     serverSelectionTimeoutMS: 10_000,
                                                                     // (optional) heartbeatFrequencyMS: 10000,
                                                                     })
-                        .then(() => console.log("✅ Database connected successfully"))
+                        .then(() => {})
                                     .catch((error) => {
                                         console.error("❌ Database connection failed:", error);
                                         process.exit(1);
@@ -172,15 +172,12 @@ const cleanupSessionKeys = async () => {
     // Try to drop and recreate the collection to fix index issues
     try {
       await SessionKeyModel.collection.drop();
-      console.log('🗑️  Dropped sessionkeys collection');
     } catch (dropError) {
       // Collection might not exist, that's okay
-      console.log('ℹ️  Sessionkeys collection did not exist');
     }
     
     // Recreate the collection
     await SessionKeyModel.createCollection();
-    console.log('✅ Recreated sessionkeys collection with proper indexes');
   } catch (error) {
     console.error('❌ Error cleaning up session keys:', error);
   }
@@ -234,33 +231,56 @@ const getClientByEmail = async (req, res) => {
 // Get client onboarding statistics grouped by month
 const getClientStats = async (req, res) => {
     try {
-        // Start from August 2025 instead of 12 months ago
-        const startDate = new Date('2025-08-01');
-        startDate.setHours(0, 0, 0, 0);
+        // Get all clients from ClientModel to ensure consistency with revenue stats
+        const allClients = await ClientModel.find({}).lean();
+        
+        // Count clients by month from August 2025 onwards
+        const monthlyStatsMap = {};
+        let totalClients = 0;
 
-        // Aggregate clients by month from August 2025 onwards
-        const monthlyStats = await NewUserModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate }
+        allClients.forEach(client => {
+            // Parse createdAt string to Date
+            let clientDate;
+            try {
+                clientDate = new Date(client.createdAt);
+                if (isNaN(clientDate.getTime())) {
+                    return; // Skip invalid dates
                 }
-            },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" }
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $sort: { "_id.year": 1, "_id.month": 1 }
+            } catch (error) {
+                return; // Skip parsing errors
             }
-        ]);
 
-        // Get total clients
-        const totalClients = await NewUserModel.countDocuments();
+            // Filter for August 2025 onwards
+            const startDate = new Date('2025-08-01');
+            if (clientDate < startDate) {
+                return;
+            }
+
+            totalClients++;
+
+            // Group by month
+            const year = clientDate.getFullYear();
+            const month = clientDate.getMonth() + 1;
+            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+            
+            if (!monthlyStatsMap[monthKey]) {
+                monthlyStatsMap[monthKey] = {
+                    year,
+                    month,
+                    count: 0
+                };
+            }
+            monthlyStatsMap[monthKey].count++;
+        });
+
+        // Convert to array format matching the old structure
+        const monthlyStats = Object.values(monthlyStatsMap).sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.month - b.month;
+        }).map(stat => ({
+            _id: { year: stat.year, month: stat.month },
+            count: stat.count
+        }));
 
         // Get current month stats
         const currentMonth = new Date().getMonth() + 1;
@@ -1070,6 +1090,93 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Change password for user (admin only)
+const changePassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    // Validate new password
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Check if user exists
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Only allow changing password for admin users
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Can only change password for admin users' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.password = hashedPassword;
+    user.updatedAt = new Date().toLocaleString('en-US', 'Asia/Kolkata');
+    await user.save();
+
+    res.status(200).json({
+      message: 'Password changed successfully',
+      email: user.email
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Change password for client (admin only) - updates users collection
+const changeClientPassword = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { newPassword } = req.body;
+
+    // Validate new password
+    if (!newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Check if client exists in users collection
+    const client = await NewUserModel.findOne({ email: email.toLowerCase() });
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    // Encrypt new password using the same encrypt function used during creation
+    const encryptedPassword = encrypt(newPassword);
+
+    // Update password
+    await NewUserModel.updateOne(
+      { email: email.toLowerCase() },
+      { 
+        $set: { 
+          passwordHashed: encryptedPassword,
+          updatedAt: new Date().toLocaleString('en-US', 'Asia/Kolkata')
+        } 
+      }
+    );
+
+    res.status(200).json({
+      message: 'Client password changed successfully',
+      email: email.toLowerCase()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Delete client with cascade deletion
 const deleteClient = async (req, res) => {
   try {
@@ -1353,6 +1460,7 @@ app.post('/api/auth/login', login);
 app.post('/api/auth/users', verifyToken, verifyAdmin, createUser);
 app.get('/api/auth/users', verifyToken, verifyAdmin, getAllUsers);
 app.delete('/api/auth/users/:userId', verifyToken, verifyAdmin, deleteUser);
+app.put('/api/auth/users/:userId/change-password', verifyToken, verifyAdmin, changePassword);
 app.post('/api/auth/session-key', verifyToken, verifyAdmin, generateSessionKey);
 app.get('/api/auth/session-keys/:userEmail', verifyToken, verifyAdmin, getUserSessionKeys);
 app.post('/api/auth/cleanup-session-keys', verifyToken, verifyAdmin, cleanupSessionKeysEndpoint);
@@ -1391,16 +1499,12 @@ const syncClientsFromJobs = async (req, res) => {
             id && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id)
         ))];
 
-        console.log(`Found ${uniqueUserIDs.length} unique valid userIDs in jobs`);
-
         // Check which clients already exist in dashboardtrackings
         const existingClients = await ClientModel.find({}, 'email').lean();
         const existingEmails = existingClients.map(client => client.email);
         
         // Find missing clients
         const missingClients = uniqueUserIDs.filter(userID => !existingEmails.includes(userID));
-        
-        console.log(`Found ${missingClients.length} missing clients to create`);
 
         // Create missing clients with default values
         const createdClients = [];
@@ -1453,7 +1557,6 @@ const syncClientsFromJobs = async (req, res) => {
             const client = new ClientModel(clientData);
             await client.save();
             createdClients.push(client);
-            console.log(`Created client profile for: ${email}`);
         }
 
         res.status(200).json({
@@ -2152,25 +2255,75 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
             ]);
         }
 
+        // Aggregate removed jobs on selected date (ONLY for removed column)
+        let removedOnDate = [];
+        if (multiFormatDateRegex) {
+            removedOnDate = await JobModel.aggregate([
+                { 
+                    $match: { 
+                        $and: [
+                            { $or: [
+                                { currentStatus: { $regex: /delete/i } },
+                                { currentStatus: { $regex: /removed/i } }
+                            ]},
+                            { updatedAt: { $regex: multiFormatDateRegex } }
+                        ]
+                    }
+                },
+                { $group: { _id: "$userID", count: { $sum: 1 } } },
+                { $project: { _id: 0, userID: "$_id", count: 1 } }
+            ]);
+        }
+
         // Merge results across all userIDs seen
         const appliedMap = new Map(appliedOnDate.map(r => [r.userID, r.count]));
+        const removedMap = new Map(removedOnDate.map(r => [r.userID, r.count]));
         const overallMap = new Map(overall.map(r => [r.userID, r.counts]));
-        const allUserIDs = Array.from(new Set([...overallMap.keys(), ...appliedMap.keys()]));
+        const allUserIDs = Array.from(new Set([...overallMap.keys(), ...appliedMap.keys(), ...removedMap.keys()]));
 
-        const rows = allUserIDs.map(email => {
+        // Fetch client info (name, planType, and status) from ClientModel for all userIDs
+        const clientInfo = await ClientModel.find({ 
+            email: { $in: allUserIDs } 
+        }).select('email name planType planPrice status jobStatus').lean();
+        const clientMap = new Map(clientInfo.map(c => [c.email, { name: c.name, planType: c.planType, planPrice: c.planPrice, status: c.status, jobStatus: c.jobStatus }]));
+
+        // Prepare base rows from JobModel aggregates
+        let rows = allUserIDs.map(email => {
             const counts = overallMap.get(email) || {};
+            const client = clientMap.get(email) || {};
+            // Use date-filtered removed count if date is selected, otherwise use total count
+            const removedCount = multiFormatDateRegex 
+                ? (removedMap.get(email) || 0)  // If date selected, show 0 if no jobs moved on that date
+                : (counts.deleted || 0);         // If no date selected, show total count
             return {
                 email,
-                name: email, // user name is taken from userID per requirement
+                name: client.name || email,
+                planType: client.planType || null,
+                planPrice: client.planPrice || null,
+                status: client.status || null,
+                jobStatus: client.jobStatus || null,
                 saved: counts.saved || 0,
                 applied: counts.applied || 0,
                 interviewing: counts.interviewing || 0,
                 offer: counts.offer || 0,
                 rejected: counts.rejected || 0,
-                removed: counts.deleted || 0,
+                removed: removedCount,
                 appliedOnDate: appliedMap.get(email) || 0
             };
-        }).sort((a,b)=> a.email.localeCompare(b.email));
+        });
+
+        // Sort: active first, then inactive, then alphabetically by email
+        rows.sort((a, b) => {
+            // First, sort by status: active comes before inactive
+            const statusOrder = { 'active': 0, 'inactive': 1 };
+            const statusA = statusOrder[a.status] ?? 2;
+            const statusB = statusOrder[b.status] ?? 2;
+            if (statusA !== statusB) {
+                return statusA - statusB;
+            }
+            // If same status, sort by email alphabetically
+            return a.email.localeCompare(b.email);
+        });
 
         res.status(200).json({ success: true, date: date || null, rows });
     } catch (e) {
@@ -2456,131 +2609,21 @@ const getPlanTypeStats = async (req, res) => {
 // Get revenue statistics
 const getRevenueStats = async (req, res) => {
     try {
-        // Plan pricing
-        const planPricing = {
-            'Executive': 45000,
-            'Professional': 35000,
-            'Ignite': 15000,
-            'Free Trial': 0
-        };
+        // Get all clients from ClientModel to calculate real revenue from amountPaid
+        const allClients = await ClientModel.find({}).lean();
 
-        // Start from August 2025
-        const startDate = new Date('2025-08-01');
-        startDate.setHours(0, 0, 0, 0);
-
-        // Aggregate revenue by month from August 2025 onwards
-        const monthlyRevenue = await NewUserModel.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: startDate }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" },
-                        planType: "$planType"
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $sort: { "_id.year": 1, "_id.month": 1 }
-            }
-        ]);
-
-        // Calculate total revenue
+        // Simply sum up all amountPaid values
         let totalRevenue = 0;
-        const revenueByMonth = {};
 
-        monthlyRevenue.forEach(stat => {
-            const planType = stat._id.planType;
-            const count = stat.count;
-            const price = planPricing[planType] || 0;
-            const revenue = count * price;
-            
-            totalRevenue += revenue;
-            
-            const monthKey = `${stat._id.year}-${stat._id.month.toString().padStart(2, '0')}`;
-            if (!revenueByMonth[monthKey]) {
-                revenueByMonth[monthKey] = {
-                    year: stat._id.year,
-                    month: stat._id.month,
-                    totalRevenue: 0,
-                    breakdown: {}
-                };
-            }
-            
-            revenueByMonth[monthKey].totalRevenue += revenue;
-            revenueByMonth[monthKey].breakdown[planType] = {
-                count,
-                revenue,
-                price
-            };
-        });
-
-        // Format monthly data for charts
-        const monthNames = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ];
-
-        const formattedMonthlyData = [];
-        const currentDate = new Date();
-        const startDateForLoop = new Date('2025-08-01');
-        
-        // Generate months from August 2025 to current month
-        for (let date = new Date(startDateForLoop); date <= currentDate; date.setMonth(date.getMonth() + 1)) {
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-            
-            const monthData = revenueByMonth[monthKey] || {
-                year,
-                month,
-                totalRevenue: 0,
-                breakdown: {}
-            };
-            
-            formattedMonthlyData.push({
-                month: `${monthNames[month - 1]} ${year}`,
-                revenue: monthData.totalRevenue,
-                year,
-                monthNumber: month,
-                breakdown: monthData.breakdown
-            });
-        }
-
-        // Calculate plan-wise totals
-        const planTotals = {};
-        Object.keys(planPricing).forEach(planType => {
-            planTotals[planType] = {
-                count: 0,
-                revenue: 0,
-                price: planPricing[planType]
-            };
-        });
-
-        monthlyRevenue.forEach(stat => {
-            const planType = stat._id.planType;
-            const count = stat.count;
-            const price = planPricing[planType] || 0;
-            const revenue = count * price;
-            
-            if (planTotals[planType]) {
-                planTotals[planType].count += count;
-                planTotals[planType].revenue += revenue;
-            }
+        allClients.forEach(client => {
+            const amountPaid = client.amountPaid || 0;
+            totalRevenue += amountPaid;
         });
 
         res.status(200).json({
             success: true,
             data: {
-                totalRevenue,
-                monthlyRevenue: formattedMonthlyData,
-                planTotals,
-                planPricing
+                totalRevenue
             }
         });
     } catch (error) {
@@ -2623,6 +2666,7 @@ app.get('/api/clients/all', async (req, res) => {
 app.post('/api/clients', createOrUpdateClient);
 app.post('/api/clients/sync-from-jobs', syncClientsFromJobs);
 app.delete('/api/clients/delete/:email', deleteClient);
+app.put('/api/clients/:email/change-password', verifyToken, verifyAdmin, changeClientPassword);
 
 //get all the jobdatabase data..
 const getJobsByClient = async (req, res) => {
@@ -2842,14 +2886,10 @@ const getClientDetails = async (req, res) => {
 // Sync manager assignments from users collection to dashboardtrackings
 const syncManagerAssignments = async (req, res) => {
     try {
-        console.log('🔄 Starting manager assignment sync...');
-        
         // Get all users with dashboardManager assignments
         const usersWithManagers = await NewUserModel.find({ 
             dashboardManager: { $exists: true, $ne: null, $ne: "" } 
         }).lean();
-        
-        console.log(`Found ${usersWithManagers.length} users with manager assignments`);
         
         let syncedCount = 0;
         let errors = [];
@@ -2869,9 +2909,9 @@ const syncManagerAssignments = async (req, res) => {
                 
                 if (updateResult.matchedCount > 0) {
                     syncedCount++;
-                    console.log(`✅ Synced manager "${user.dashboardManager}" for ${user.email}`);
+                    // Manager synced successfully
                 } else {
-                    console.log(`⚠️  No matching client found in dashboardtrackings for ${user.email}`);
+                    // No matching client found
                 }
             } catch (error) {
                 console.error(`❌ Error syncing ${user.email}:`, error.message);
@@ -2944,4 +2984,4 @@ app.post('/api/clients/sync-managers', syncManagerAssignments);
 
 // Client details route (removed duplicate - using getClientByEmail instead)
 
-app.listen(process.env.PORT, ()=> console.log("server is live for application monitoring at Port:", process.env.PORT)) ;
+app.listen(process.env.PORT);
