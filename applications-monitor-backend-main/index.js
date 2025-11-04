@@ -2288,11 +2288,31 @@ if (callQueue && twilioClient && TWILIO_FROM) {
         { status: 'processing', attemptAt: new Date() }
       );
 
+      // Build dynamic TwiML with meeting time = scheduled time + 10 minutes
+      let meetingTimeText = 'the scheduled time';
+      try {
+        const log = await CallLogModel.findOne({ jobId: String(job.id) }).lean();
+        const baseTime = log?.scheduledFor ? new Date(log.scheduledFor) : new Date();
+        const meetingDate = new Date(baseTime.getTime() + 10 * 60 * 1000);
+        meetingTimeText = meetingDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } catch {}
+
+      const { VoiceResponse } = Twilio.twiml;
+      const twiml = new VoiceResponse();
+      twiml.pause({ length: 1 });
+      twiml.say(
+        { voice: 'alice', language: 'en-US' },
+        `Hi, this is FlashFire. This is a quick reminder for your meeting scheduled at ${meetingTimeText}.`
+      );
+      twiml.say(
+        { voice: 'alice', language: 'en-US' },
+        'See you in the meeting. Thank you and good luck.'
+      );
+
       const call = await twilioClient.calls.create({
         to: phoneNumber,
         from: TWILIO_FROM,
-        twiml:
-          '<Response><Say voice="alice">Hello, this is your scheduled call from FlashFire. Have a great day!</Say></Response>',
+        twiml: twiml.toString(),
       });
 
       await CallLogModel.findOneAndUpdate(
