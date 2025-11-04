@@ -131,8 +131,15 @@ export default function ClientJobAnalysis() {
                   if (statusA !== statusB) return statusA - statusB;
                   // Secondary sort: email alphabetically
                   return a.email.localeCompare(b.email);
-                }).map((r, idx) => (
-                  <tr key={r.email+idx} className={idx%2===0? 'bg-white':'bg-gray-50'}>
+                }).map((r, idx) => {
+                  const totalApplications = (Number(r.saved||0) + Number(r.applied||0) + Number(r.interviewing||0) + Number(r.offer||0));
+                  const plan = (r.planType || '').toLowerCase();
+                  const threshold = plan === 'ignite' ? 250 : plan === 'professional' ? 500 : plan === 'executive' ? 1000 : Infinity;
+                  const exceeded = totalApplications > threshold;
+                  const baseRowColor = idx%2===0? 'bg-white':'bg-gray-50';
+                  const highlightClass = exceeded ? 'bg-red-100' : '';
+                  return (
+                  <tr key={r.email+idx} className={`${baseRowColor} ${highlightClass}`}>
                     <td className="px-4 py-2 text-sm text-gray-900">{r.email}</td>
                     <td className="px-4 py-2 text-sm">
                       {r.status ? (
@@ -154,9 +161,7 @@ export default function ClientJobAnalysis() {
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-2 text-sm">
-                      {(Number(r.saved||0) + Number(r.applied||0) + Number(r.interviewing||0) + Number(r.offer||0))}
-                    </td>
+                    <td className="px-4 py-2 text-sm">{totalApplications}</td>
                     <td className="px-4 py-2 text-sm">{r.saved}</td>
                     <td className="px-4 py-2 text-sm">{r.applied}</td>
                     <td className="px-4 py-2 text-sm">{r.interviewing}</td>
@@ -173,7 +178,7 @@ export default function ClientJobAnalysis() {
                       )}
                     </td>
                   </tr>
-                ))}
+                )})}
                 {rows.length===0 && (
                   <tr>
                     <td colSpan={11} className="px-4 py-10 text-center text-gray-500">No data</td>
