@@ -95,6 +95,11 @@ export default function Layout({ children }) {
       Client Job Analysis
     </button>
   </Link>
+  <Link to="/call-scheduler">
+    <button className="w-full p-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+      Call Scheduler
+    </button>
+  </Link>
 </div>
 
 

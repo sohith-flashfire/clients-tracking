@@ -32,6 +32,7 @@ import OperationsDetails from './components/OperationsDetails.jsx';
 import ClientDashboard from './components/ClientDashboard.jsx';
 import JobAnalytics from './components/JobAnalytics.jsx';
 import ClientJobAnalysis from './components/ClientJobAnalysis.jsx';
+import CallScheduler from './components/CallScheduler.jsx';
 
 const router = createBrowserRouter([
   {
@@ -77,6 +78,10 @@ const router = createBrowserRouter([
       ,{
         path : '/client-job-analysis',
         element: <ClientJobAnalysis />
+      },
+      {
+        path: '/call-scheduler',
+        element: <CallScheduler />
       }
     ]
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Layout from './Layout';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_BASE || 'https://clients-tracking-backend.onrender.com';
 
@@ -82,6 +83,7 @@ export default function ClientJobAnalysis() {
               <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md"/>
               <button onClick={findAppliedOnDate} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">Find Applied on this Date</button>
               <button onClick={onRefresh} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">{loading? 'Loading...' : 'Refresh'}</button>
+              {/* <Link to="/call-scheduler" className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Call Scheduler</Link> */}
             </div>
           </div>
           <div className="px-6 py-4 overflow-x-auto">

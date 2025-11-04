@@ -13,6 +13,10 @@ import 'dotenv/config';
 import CreateCampaign from './controllers/NewCampaign.js';
 import { decode, encode} from './utils/CodeExaminer.js';
 import { LinkCampaignUtm, Click } from './schema_models/UtmSchema.js';
+import { CallLogModel } from './CallLogModel.js';
+import Twilio from 'twilio';
+import { Queue, Worker, QueueEvents } from 'bullmq';
+import IORedis from 'ioredis';
 import { 
   getAllManagers, 
   getManagerById, 
@@ -2389,6 +2393,173 @@ app.post('/api/analytics/clear-cache', (req, res) => {
     performanceStats.averageResponseTime = 0;
     performanceStats.lastReset = Date.now();
     res.json({ success: true, message: 'Cache cleared' });
+});
+
+// ==========================
+// Call Scheduler (BullMQ)
+// ==========================
+const REDIS_URL = process.env.REDIS_CLOUD_URL || process.env.UPSTASH_REDIS_URL;
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_FROM = process.env.TWILIO_FROM;
+
+let redisConnection;
+let callQueue;
+let callWorker;
+let callQueueEvents;
+let twilioClient;
+
+try {
+  if (!REDIS_URL) {
+    console.warn('⚠️  REDIS URL not set; call scheduler disabled');
+  } else {
+    redisConnection = new IORedis(REDIS_URL, {
+      // Required by BullMQ to avoid throwing on blocking ops in serverless/managed redis
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    });
+    callQueue = new Queue('callQueue', { connection: redisConnection });
+    callQueueEvents = new QueueEvents('callQueue', { connection: redisConnection });
+  }
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+    twilioClient = Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+  }
+} catch (e) {
+  console.error('❌ Error initializing Call Scheduler:', e);
+}
+
+if (callQueue && twilioClient && TWILIO_FROM) {
+  callWorker = new Worker(
+    'callQueue',
+    async (job) => {
+      const { phoneNumber } = job.data || {};
+      if (!phoneNumber) throw new Error('phoneNumber missing');
+
+      // Mark processing in logs
+      await CallLogModel.findOneAndUpdate(
+        { jobId: job.id },
+        { status: 'processing', attemptAt: new Date() }
+      );
+
+      // Build dynamic TwiML with meeting time = scheduled time + 10 minutes
+      let meetingTimeText = 'the scheduled time';
+      try {
+        const log = await CallLogModel.findOne({ jobId: String(job.id) }).lean();
+        const baseTime = log?.scheduledFor ? new Date(log.scheduledFor) : new Date();
+        const meetingDate = new Date(baseTime.getTime() + 10 * 60 * 1000);
+        meetingTimeText = meetingDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      } catch {}
+
+      const { VoiceResponse } = Twilio.twiml;
+      const twiml = new VoiceResponse();
+      twiml.pause({ length: 1 });
+      twiml.say(
+        { voice: 'alice', language: 'en-US' },
+        `Hi, this is FlashFire. This is a quick reminder for your meeting scheduled at ${meetingTimeText}.`
+      );
+      twiml.say(
+        { voice: 'alice', language: 'en-US' },
+        'See you in the meeting. Thank you and good luck.'
+      );
+
+      const call = await twilioClient.calls.create({
+        to: phoneNumber,
+        from: TWILIO_FROM,
+        twiml: twiml.toString(),
+      });
+
+      await CallLogModel.findOneAndUpdate(
+        { jobId: job.id },
+        { status: 'completed', twilioCallSid: call.sid }
+      );
+
+      return { ok: true, sid: call.sid };
+    },
+    { connection: redisConnection }
+  );
+
+  callWorker.on('failed', async (job, err) => {
+    try {
+      await CallLogModel.findOneAndUpdate(
+        { jobId: job?.id },
+        { status: 'failed', error: err?.message || 'Unknown error', attemptAt: new Date() }
+      );
+    } catch {}
+  });
+}
+
+// Schedule a call
+app.post('/api/calls/schedule', verifyToken, async (req, res) => {
+  try {
+    const { phoneNumber, scheduleTime } = req.body || {};
+    if (!callQueue || !twilioClient || !TWILIO_FROM) {
+      return res.status(503).json({ success: false, error: 'Call scheduler not configured' });
+    }
+    if (!phoneNumber || !scheduleTime) {
+      return res.status(400).json({ success: false, error: 'phoneNumber and scheduleTime are required' });
+    }
+    // Validate E.164-like number quickly
+    if (!/^\+?[1-9]\d{7,14}$/.test(phoneNumber)) {
+      return res.status(400).json({ success: false, error: 'Invalid phone number. Use country code, e.g. +14155551234' });
+    }
+    const scheduledAt = new Date(scheduleTime);
+    if (isNaN(scheduledAt.getTime())) {
+      return res.status(400).json({ success: false, error: 'Invalid scheduleTime' });
+    }
+    const delayMs = Math.max(0, scheduledAt.getTime() - Date.now());
+
+    const job = await callQueue.add(
+      'makeCall',
+      { phoneNumber },
+      {
+        delay: delayMs,
+        removeOnComplete: true,
+        removeOnFail: false,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 60_000 },
+      }
+    );
+
+    await CallLogModel.create({
+      phoneNumber,
+      scheduledFor: scheduledAt,
+      status: 'scheduled',
+      jobId: String(job.id),
+    });
+
+    res.status(201).json({ success: true, jobId: job.id, scheduledFor: scheduledAt });
+  } catch (e) {
+    console.error('schedule call error', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// List recent call logs
+app.get('/api/calls/logs', verifyToken, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
+    const logs = await CallLogModel.find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    res.json({ success: true, logs });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Optional: list queued jobs
+app.get('/api/calls/jobs', verifyToken, async (req, res) => {
+  try {
+    if (!callQueue) return res.json({ success: true, jobs: [] });
+    const jobs = await callQueue.getJobs(['delayed', 'waiting', 'active']);
+    res.json({
+      success: true,
+      jobs: jobs.map((j) => ({ id: j.id, name: j.name, delay: j.delay, timestamp: j.timestamp, data: j.data })),
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // Get plan type statistics
