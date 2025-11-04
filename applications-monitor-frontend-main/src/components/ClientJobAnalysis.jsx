@@ -133,8 +133,13 @@ export default function ClientJobAnalysis() {
                   return a.email.localeCompare(b.email);
                 }).map((r, idx) => {
                   const totalApplications = (Number(r.saved||0) + Number(r.applied||0) + Number(r.interviewing||0) + Number(r.offer||0));
-                  const plan = (r.planType || '').toLowerCase();
-                  const threshold = plan === 'ignite' ? 250 : plan === 'professional' ? 500 : plan === 'executive' ? 1000 : Infinity;
+                  const plan = String(r.planType || '')
+                    .trim()
+                    .toLowerCase();
+                  const isIgnite = plan.includes('ignite');
+                  const isProfessional = plan.includes('professional');
+                  const isExecutive = plan.includes('executive');
+                  const threshold = isIgnite ? 250 : isProfessional ? 500 : isExecutive ? 1000 : Infinity;
                   const exceeded = totalApplications > threshold;
                   const baseRowColor = idx%2===0? 'bg-white':'bg-gray-50';
                   const highlightClass = exceeded ? 'bg-red-100' : '';
