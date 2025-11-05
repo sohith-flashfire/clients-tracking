@@ -2333,7 +2333,7 @@ if (callQueue && twilioClient && TWILIO_FROM) {
 
       await CallLogModel.findOneAndUpdate(
         { jobId: job.id },
-        { twilioCallSid: call.sid, callStatus: 'initiated', $push: { statusHistory: { event: 'initiated', status: 'calling', raw: { sid: call.sid }, timestamp: new Date() } } }
+        { twilioCallSid: call.sid, callStatus: 'initiated', status: 'calling', $push: { statusHistory: { event: 'initiated', status: 'calling', raw: { sid: call.sid }, timestamp: new Date() } } }
       );
 
       return { ok: true, sid: call.sid };
@@ -2400,8 +2400,30 @@ app.post('/api/calls/schedule', verifyToken, async (req, res) => {
 });
 
 // List recent call logs
+async function sweepOverdueCalls(graceMs = 120000) {
+  const now = Date.now();
+  const threshold = new Date(now - 0); 
+  const candidates = await CallLogModel.find({
+    scheduledFor: { $lte: new Date(now - graceMs) },
+    status: { $in: ['queued', 'in_progress', 'calling'] }
+  }).limit(200).lean();
+  for (const c of candidates) {
+    await CallLogModel.updateOne(
+      { _id: c._id },
+      {
+        status: 'completed',
+        callStatus: c.callStatus || 'completed',
+        callEndAt: new Date(),
+        $push: { statusHistory: { event: 'auto-completed', status: 'completed', timestamp: new Date(), raw: { reason: 'overdue_sweep' } } }
+      }
+    );
+  }
+  return candidates.length;
+}
+
 app.get('/api/calls/logs', verifyToken, async (req, res) => {
   try {
+    await sweepOverdueCalls(2 * 60 * 1000);
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const raw = await CallLogModel.find({})
       .sort({ createdAt: -1 })
