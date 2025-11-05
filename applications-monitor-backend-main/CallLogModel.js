@@ -12,8 +12,8 @@ const CallLogSchema = new mongoose.Schema(
     callEndAt: { type: Date },
     status: {
       type: String,
-      enum: ['scheduled', 'processing', 'completed', 'failed'],
-      default: 'scheduled',
+      enum: ['scheduled', 'queued', 'in_progress', 'calling', 'completed', 'failed'],
+      default: 'queued',
     },
     jobId: { type: String },
     attemptAt: { type: Date },
