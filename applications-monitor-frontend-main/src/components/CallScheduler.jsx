@@ -8,6 +8,7 @@ const API_BASE = import.meta.env.VITE_BASE || 'https://clients-tracking-backend.
 export default function CallScheduler() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
+  const [announceTimeText, setAnnounceTimeText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -59,13 +60,14 @@ export default function CallScheduler() {
       const resp = await fetch(`${API_BASE}/api/calls/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ phoneNumber, scheduleTime: iso })
+        body: JSON.stringify({ phoneNumber, scheduleTime: iso, announceTimeText: announceTimeText?.trim() || undefined })
       });
       const data = await resp.json();
       if (!resp.ok || !data.success) throw new Error(data.error || 'Failed');
       toast.success('Call scheduled');
       setPhoneNumber('');
       setScheduleTime('');
+      setAnnounceTimeText('');
       fetchLogs();
     } catch (e) {
       toast.error(e.message || 'Failed to schedule');
@@ -104,6 +106,17 @@ export default function CallScheduler() {
                 onChange={(e)=>setScheduleTime(e.target.value)}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="sm:col-span-3">
+              <label className="block text-sm font-medium text-gray-700">Announce Time (what to say)</label>
+              <input
+                type="text"
+                value={announceTimeText}
+                onChange={(e)=>setAnnounceTimeText(e.target.value)}
+                placeholder="e.g., 5:30 PM"
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">If left empty, it will say scheduled time + 10 minutes.</p>
             </div>
             <div className="sm:col-span-3 flex justify-end">
               <button

@@ -108,6 +108,8 @@ app.use(
 app.options(/.*/, cors());
 
 app.use(express.json());
+// Twilio webhooks send application/x-www-form-urlencoded by default
+app.use(express.urlencoded({ extended: false }));
 //Helpers
 // function getClientIP(req) {
 //   const xff = req.headers["x-forwarded-for"];
@@ -2249,6 +2251,7 @@ const REDIS_URL = process.env.REDIS_CLOUD_URL || process.env.UPSTASH_REDIS_URL;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_FROM = process.env.TWILIO_FROM;
+const CALL_STATUS_WEBHOOK_URL = process.env.CALL_STATUS_WEBHOOK_URL || process.env.PUBLIC_BASE_URL ? `${process.env.PUBLIC_BASE_URL}/api/calls/status` : undefined;
 
 let redisConnection;
 let callQueue;
@@ -2292,9 +2295,15 @@ if (callQueue && twilioClient && TWILIO_FROM) {
       let meetingTimeText = 'the scheduled time';
       try {
         const log = await CallLogModel.findOne({ jobId: String(job.id) }).lean();
-        const baseTime = log?.scheduledFor ? new Date(log.scheduledFor) : new Date();
-        const meetingDate = new Date(baseTime.getTime() + 10 * 60 * 1000);
-        meetingTimeText = meetingDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        // Priority: explicit announceTimeText from job -> from log -> fallback +10 minutes
+        const explicitText = job?.data?.announceTimeText || log?.announceTimeText;
+        if (explicitText && explicitText.trim().length > 0) {
+          meetingTimeText = explicitText.trim();
+        } else {
+          const baseTime = log?.scheduledFor ? new Date(log.scheduledFor) : new Date();
+          const meetingDate = new Date(baseTime.getTime() + 10 * 60 * 1000);
+          meetingTimeText = meetingDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
       } catch {}
 
       const { VoiceResponse } = Twilio.twiml;
@@ -2313,11 +2322,18 @@ if (callQueue && twilioClient && TWILIO_FROM) {
         to: phoneNumber,
         from: TWILIO_FROM,
         twiml: twiml.toString(),
+        ...(CALL_STATUS_WEBHOOK_URL
+          ? {
+              statusCallback: CALL_STATUS_WEBHOOK_URL,
+              statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+              statusCallbackMethod: 'POST',
+            }
+          : {}),
       });
 
       await CallLogModel.findOneAndUpdate(
         { jobId: job.id },
-        { status: 'completed', twilioCallSid: call.sid }
+        { status: 'completed', twilioCallSid: call.sid, callStatus: 'queued', statusHistory: [{ event: 'queued', status: 'queued', raw: { sid: call.sid } }] }
       );
 
       return { ok: true, sid: call.sid };
@@ -2338,7 +2354,7 @@ if (callQueue && twilioClient && TWILIO_FROM) {
 // Schedule a call
 app.post('/api/calls/schedule', verifyToken, async (req, res) => {
   try {
-    const { phoneNumber, scheduleTime } = req.body || {};
+    const { phoneNumber, scheduleTime, announceTimeText } = req.body || {};
     if (!callQueue || !twilioClient || !TWILIO_FROM) {
       return res.status(503).json({ success: false, error: 'Call scheduler not configured' });
     }
@@ -2357,7 +2373,7 @@ app.post('/api/calls/schedule', verifyToken, async (req, res) => {
 
     const job = await callQueue.add(
       'makeCall',
-      { phoneNumber },
+      { phoneNumber, announceTimeText: (announceTimeText || '').trim() || undefined },
       {
         delay: delayMs,
         removeOnComplete: true,
@@ -2370,6 +2386,7 @@ app.post('/api/calls/schedule', verifyToken, async (req, res) => {
     await CallLogModel.create({
       phoneNumber,
       scheduledFor: scheduledAt,
+      announceTimeText: (announceTimeText || '').trim() || undefined,
       status: 'scheduled',
       jobId: String(job.id),
     });
@@ -2406,6 +2423,68 @@ app.get('/api/calls/jobs', verifyToken, async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Twilio status webhook (no auth; configure CALL_STATUS_WEBHOOK_URL)
+app.post('/api/calls/status', async (req, res) => {
+  try {
+    const {
+      CallSid,
+      CallStatus,
+      CallDuration,
+      From,
+      To,
+      Timestamp,
+      SequenceNumber,
+    } = req.body || {};
+
+    // Find by Sid if available, otherwise by To number (latest)
+    let log = null;
+    if (CallSid) {
+      log = await CallLogModel.findOne({ twilioCallSid: CallSid });
+    }
+    if (!log && To) {
+      log = await CallLogModel.findOne({ phoneNumber: To }).sort({ createdAt: -1 });
+    }
+
+    if (log) {
+      const historyEntry = {
+        event: CallStatus,
+        status: CallStatus,
+        timestamp: Timestamp ? new Date(Timestamp) : new Date(),
+        raw: req.body,
+      };
+
+      const update = {
+        callStatus: CallStatus,
+        $push: { statusHistory: historyEntry },
+      };
+
+      if (CallDuration) {
+        update.callDurationSec = Number(CallDuration);
+      }
+      if (CallStatus === 'in-progress' || CallStatus === 'answered') {
+        update.callStartAt = new Date();
+      }
+      if (CallStatus === 'completed' || CallStatus === 'busy' || CallStatus === 'failed' || CallStatus === 'no-answer' || CallStatus === 'canceled') {
+        update.callEndAt = new Date();
+        if (CallStatus === 'completed') {
+          update.status = 'completed';
+        } else if (CallStatus === 'failed') {
+          update.status = 'failed';
+        }
+      }
+
+      await CallLogModel.updateOne({ _id: log._id }, update);
+    }
+
+    // Always 200 OK to Twilio
+    res.type('text/plain').send('OK');
+  } catch (e) {
+    // Still return 200 to prevent Twilio retries storm, but log server-side
+    console.error('Twilio status webhook error', e);
+    res.type('text/plain').send('OK');
   }
 });
 
