@@ -8,6 +8,7 @@ const API_BASE = import.meta.env.VITE_BASE || 'https://clients-tracking-backend.
 export default function CallScheduler() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
+  const [announceTimeText, setAnnounceTimeText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -59,13 +60,14 @@ export default function CallScheduler() {
       const resp = await fetch(`${API_BASE}/api/calls/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ phoneNumber, scheduleTime: iso })
+        body: JSON.stringify({ phoneNumber, scheduleTime: iso, announceTimeText: announceTimeText?.trim() || undefined })
       });
       const data = await resp.json();
       if (!resp.ok || !data.success) throw new Error(data.error || 'Failed');
       toast.success('Call scheduled');
       setPhoneNumber('');
       setScheduleTime('');
+      setAnnounceTimeText('');
       fetchLogs();
     } catch (e) {
       toast.error(e.message || 'Failed to schedule');
@@ -105,6 +107,17 @@ export default function CallScheduler() {
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+            <div className="sm:col-span-3">
+              <label className="block text-sm font-medium text-gray-700">Announce Time (what to say)</label>
+              <input
+                type="text"
+                value={announceTimeText}
+                onChange={(e)=>setAnnounceTimeText(e.target.value)}
+                placeholder="e.g., 5:30 PM"
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">If left empty, it will say scheduled time + 10 minutes.</p>
+            </div>
             <div className="sm:col-span-3 flex justify-end">
               <button
                 type="submit"
@@ -129,7 +142,7 @@ export default function CallScheduler() {
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Phone</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Scheduled For</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Attempt</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Last Update</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Error</th>
                 </tr>
               </thead>
@@ -139,11 +152,11 @@ export default function CallScheduler() {
                     <td className="px-4 py-2 text-sm text-gray-900">{l.phoneNumber}</td>
                     <td className="px-4 py-2 text-sm">{new Date(l.scheduledFor).toLocaleString()}</td>
                     <td className="px-4 py-2 text-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-xs border ${l.status==='completed' ? 'bg-green-100 border-green-300 text-green-700' : l.status==='failed' ? 'bg-red-100 border-red-300 text-red-700' : l.status==='processing' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                        {l.status}
+                      <span className={`px-2 py-0.5 rounded-full text-xs border ${ (l.derivedStatus||l.status)==='completed' ? 'bg-green-100 border-green-300 text-green-700' : (l.derivedStatus||l.status)==='failed' ? 'bg-red-100 border-red-300 text-red-700' : (l.derivedStatus||l.status)==='in_progress' || (l.derivedStatus||l.status)==='calling' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : (l.derivedStatus||l.status)==='queued' ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
+                        {(l.derivedStatus || l.status || '').replace('_',' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-sm">{l.attemptAt ? new Date(l.attemptAt).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-sm">{l.lastUpdated ? new Date(l.lastUpdated).toLocaleString() : (l.attemptAt ? new Date(l.attemptAt).toLocaleString() : '-')}</td>
                     <td className="px-4 py-2 text-sm text-red-600">{l.error || ''}</td>
                   </tr>
                 ))}
