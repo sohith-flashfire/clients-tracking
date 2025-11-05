@@ -2288,7 +2288,7 @@ if (callQueue && twilioClient && TWILIO_FROM) {
       // Mark processing in logs
       await CallLogModel.findOneAndUpdate(
         { jobId: job.id },
-        { status: 'processing', attemptAt: new Date() }
+        { status: 'in_progress', attemptAt: new Date(), $push: { statusHistory: { event: 'in_progress', status: 'in_progress', timestamp: new Date() } } }
       );
 
       // Build dynamic TwiML with meeting time = scheduled time + 10 minutes
@@ -2333,7 +2333,7 @@ if (callQueue && twilioClient && TWILIO_FROM) {
 
       await CallLogModel.findOneAndUpdate(
         { jobId: job.id },
-        { status: 'completed', twilioCallSid: call.sid, callStatus: 'queued', statusHistory: [{ event: 'queued', status: 'queued', raw: { sid: call.sid } }] }
+        { twilioCallSid: call.sid, callStatus: 'initiated', $push: { statusHistory: { event: 'initiated', status: 'calling', raw: { sid: call.sid }, timestamp: new Date() } } }
       );
 
       return { ok: true, sid: call.sid };
@@ -2387,8 +2387,9 @@ app.post('/api/calls/schedule', verifyToken, async (req, res) => {
       phoneNumber,
       scheduledFor: scheduledAt,
       announceTimeText: (announceTimeText || '').trim() || undefined,
-      status: 'scheduled',
+      status: 'queued',
       jobId: String(job.id),
+      statusHistory: [{ event: 'queued', status: 'queued', raw: { jobId: String(job.id) }, timestamp: new Date() }]
     });
 
     res.status(201).json({ success: true, jobId: job.id, scheduledFor: scheduledAt });
@@ -2402,10 +2403,29 @@ app.post('/api/calls/schedule', verifyToken, async (req, res) => {
 app.get('/api/calls/logs', verifyToken, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
-    const logs = await CallLogModel.find({})
+    const raw = await CallLogModel.find({})
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
+    const mapDerived = (l) => {
+      const hist = Array.isArray(l.statusHistory) ? l.statusHistory : [];
+      const last = hist.length ? hist[hist.length - 1] : null;
+      // Derive a friendly status priority
+      let derived = l.status;
+      if (l.callStatus) {
+        const cs = String(l.callStatus).toLowerCase();
+        if (cs.includes('complete')) derived = 'completed';
+        else if (cs.includes('answer') || cs.includes('progress')) derived = 'in_progress';
+        else if (cs.includes('ring')) derived = 'calling';
+        else if (cs.includes('init')) derived = 'calling';
+        else if (cs.includes('busy') || cs.includes('no-answer') || cs.includes('cancel')) derived = 'failed';
+      } else if (last) {
+        derived = last.status || last.event || derived;
+      }
+      const lastUpdated = last?.timestamp || l.updatedAt || l.createdAt;
+      return { ...l, derivedStatus: derived, lastUpdated };
+    };
+    const logs = raw.map(mapDerived);
     res.json({ success: true, logs });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

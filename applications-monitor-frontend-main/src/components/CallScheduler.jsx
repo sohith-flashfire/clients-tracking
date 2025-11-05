@@ -142,7 +142,7 @@ export default function CallScheduler() {
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Phone</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Scheduled For</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Attempt</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Last Update</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Error</th>
                 </tr>
               </thead>
@@ -152,11 +152,11 @@ export default function CallScheduler() {
                     <td className="px-4 py-2 text-sm text-gray-900">{l.phoneNumber}</td>
                     <td className="px-4 py-2 text-sm">{new Date(l.scheduledFor).toLocaleString()}</td>
                     <td className="px-4 py-2 text-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-xs border ${l.status==='completed' ? 'bg-green-100 border-green-300 text-green-700' : l.status==='failed' ? 'bg-red-100 border-red-300 text-red-700' : l.status==='processing' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                        {l.status}
+                      <span className={`px-2 py-0.5 rounded-full text-xs border ${ (l.derivedStatus||l.status)==='completed' ? 'bg-green-100 border-green-300 text-green-700' : (l.derivedStatus||l.status)==='failed' ? 'bg-red-100 border-red-300 text-red-700' : (l.derivedStatus||l.status)==='in_progress' || (l.derivedStatus||l.status)==='calling' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : (l.derivedStatus||l.status)==='queued' ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
+                        {(l.derivedStatus || l.status || '').replace('_',' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-sm">{l.attemptAt ? new Date(l.attemptAt).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-sm">{l.lastUpdated ? new Date(l.lastUpdated).toLocaleString() : (l.attemptAt ? new Date(l.attemptAt).toLocaleString() : '-')}</td>
                     <td className="px-4 py-2 text-sm text-red-600">{l.error || ''}</td>
                   </tr>
                 ))}
