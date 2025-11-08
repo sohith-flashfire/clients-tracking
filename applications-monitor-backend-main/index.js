@@ -2418,7 +2418,23 @@ async function sweepOverdueCalls(graceMs = 120000) {
       }
     );
   }
-  return candidates.length;
+  const callingTimeoutMs = 12000;
+  const callingCandidates = await CallLogModel.find({
+    status: 'calling',
+    updatedAt: { $lte: new Date(now - callingTimeoutMs) }
+  }).limit(200).lean();
+  for (const c of callingCandidates) {
+    await CallLogModel.updateOne(
+      { _id: c._id },
+      {
+        status: 'completed',
+        callStatus: 'completed',
+        callEndAt: new Date(),
+        $push: { statusHistory: { event: 'auto-completed', status: 'completed', timestamp: new Date(), raw: { reason: 'calling_timeout' } } }
+      }
+    );
+  }
+  return candidates.length + callingCandidates.length;
 }
 
 app.get('/api/calls/logs', verifyToken, async (req, res) => {
