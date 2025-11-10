@@ -2113,13 +2113,9 @@ app.post('/api/analytics/client-job-analysis', async (req, res) => {
                 const [a, b, yy] = date.split('/').map(n => parseInt(n, 10));
                 d = a; m = b; y = yy; // Prefer D/M/YYYY
             }
-            const dd = String(d).padStart(2, '0');
-            const mm = String(m).padStart(2, '0');
-            const dmY = `${d}/${m}/${y}`;
-            const dmY0 = `${dd}/${mm}/${y}`;
-            const mdY = `${m}/${d}/${y}`;
-            const mdY0 = `${mm}/${dd}/${y}`;
-            multiFormatDateRegex = new RegExp(`^(?:${dmY}|${dmY0}|${mdY}|${mdY0})`);
+            const dayPattern = d < 10 ? `[0]?${d}` : `${d}`;
+            const monthPattern = m < 10 ? `[0]?${m}` : `${m}`;
+            multiFormatDateRegex = new RegExp(`^${dayPattern}/${monthPattern}/${y}(?=$|\\D)`);
         }
 
         // Helper to map statuses fuzzily
@@ -2199,13 +2195,9 @@ app.post('/api/analytics/applied-by-date', async (req, res) => {
             d = a; m = b; y = yy;
         }
         if (!y || !m || !d) return res.status(400).json({ success: false, error: 'Invalid date' });
-        const dd = String(d).padStart(2, '0');
-        const mm = String(m).padStart(2, '0');
-        const dmY = `${d}/${m}/${y}`;
-        const dmY0 = `${dd}/${mm}/${y}`;
-        const mdY = `${m}/${d}/${y}`;
-        const mdY0 = `${mm}/${dd}/${y}`;
-        const dateRegex = new RegExp(`^(?:${dmY}|${dmY0}|${mdY}|${mdY0})`);
+        const dayPattern = d < 10 ? `[0]?${d}` : `${d}`;
+        const monthPattern = m < 10 ? `[0]?${m}` : `${m}`;
+        const dateRegex = new RegExp(`^${dayPattern}/${monthPattern}/${y}(?=$|\\D)`);
 
         const results = await JobModel.aggregate([
             { $match: { appliedDate: { $regex: dateRegex } } },
